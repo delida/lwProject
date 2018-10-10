@@ -7,6 +7,7 @@ import {createSubTopicSol} from "./subchainclient.js"
 import {voteOnTopic} from "./subchainclient.js"
 import {autoCheckSol} from "./subchainclient.js"
 import {AsyncStorage} from 'react-native';
+import {getInstance} from "./scAccount.js";
 //import { resolveCname } from 'dns';
 
 
@@ -27,7 +28,7 @@ var dechatmanagementAbi= config.dechatmanagementAbi;
 var dechatmanagementContract=chain3.mc.contract(JSON.parse(dechatmanagementAbi));
 var dechatmanagement=dechatmanagementContract.at(dechatmanagementaddr);
 
-const Bytes2HexString = (b)=> {
+export var Bytes2HexString = (b)=> {
   let hexs = "";
   for (let i = 0; i < b.length; i++) {
       let hex = (b[i]).toString(16);
@@ -39,7 +40,7 @@ const Bytes2HexString = (b)=> {
   return hexs;
 }
 //-----------16进制string转换成bytes32----------//
-const Hexstring2btye = (str)=> {
+export var Hexstring2btye = (str)=> {
   let pos = 0;
   let len = str.length;
   if (len % 2 != 0) {
@@ -403,12 +404,12 @@ export var createSubTopic = function (topicHash, desc, userAddr, pwd, keystore, 
 // 回答列表  (返回subTopicHash, desc, owner, voteCount)
 // 先校验问题是否过期
 //1 根据topicHash，查找回答hash数组  2 遍历获取到下标，根据下标查找所有回答
-export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAddr, rpcIp) {
+export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAddr, rpcIp, type) {
   // 校验问题是否过期
   var result = {};
 	return new Promise((resolve) => { 
     checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
-      if (data == 0) {
+      if (data == 0 && type == 1) {
         result.isEnable = 0;
         result.subTopicList = [];
         resolve(result);  // 问题已经过期
@@ -454,8 +455,8 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 								{
 									"Reqtype": 2,
 									"Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
-						    		"Position": Hexstring2btye(key),
-									"Structformat": [51, 49, 51, 51, 49, 50]
+						    	"Position": Hexstring2btye(key),
+									"Structformat": [51, 49, 51, 49, 51, 49, 50]
 								}
 							]
 					};
@@ -470,16 +471,24 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 		            	var subTopicHash = '0x' + key;
 		            	//var owner = '0x' + subTopicResult[prefixStr + converHex(suffixInt + 1)];
 		            	if (subTopicResult[prefixStr + converHex(suffixInt + 1)] != undefined) {
-		            		var owner = '0x' + subTopicResult[prefixStr + converHex(suffixInt + 1)];
+                    var owner = '0x' + subTopicResult[prefixStr + converHex(suffixInt + 1)].substring(2);
+                    var award = subTopicResult[prefixStr + converHex(suffixInt + 3)]; 
+                    var reward = 0;
+                    if (award != "" && award != null && award != undefined) {
+                      reward = chain3.toDecimal('0x' + award.substring(2)) / Math.pow(10, decimals);
+                    }
+                    
 		            		var voteCount = 0; 
-		            		if (subTopicResult[prefixStr + converHex(suffixInt + 4)] != '') {
-		            			voteCount = parseInt(subTopicResult[prefixStr + converHex(suffixInt + 4)], 16);
+		            		if (subTopicResult[prefixStr + converHex(suffixInt + 5)] != '') {
+		            			voteCount = parseInt(subTopicResult[prefixStr + converHex(suffixInt + 5)], 16);
 		            		}
 		                	subTopic.subTopicHash = subTopicHash;
 		                	subTopic.owner = owner;
 		                	subTopic.voteCount = voteCount;
-		                	
-		                	var descFlag = subTopicResult[prefixStr + converHex(suffixInt + 2)];
+                      subTopic.reward = reward;
+                      
+                      var descFlag = subTopicResult[prefixStr + converHex(suffixInt + 2)];
+                      //console.log("---------" + descFlag);
 		                	if (descFlag.length < 7) {
 		              		  	// 长string, 这里代表长度，需要连接
 		    	                var descStr = chain3.sha3(prefixStr + converHex(suffixInt + 2), 
@@ -611,16 +620,14 @@ export var autoCheck = function (userAddr, pwd, keystore, subChainAddr, rpcIp) {
 // 我的链问列表
 export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, deployLwSolAdmin) {
   return new Promise ((resolve) => {
-    console.log(11111);
     // 先set abi
     var postParam3 = {
       "SubChainAddr": subChainAddr,
       "Sender": deployLwSolAdmin,
       "Data": config.lwAbi
     };
-    console.log(2222222);
     getContractInfo(rpcIp, "ScsRPCMethod.SetDappAbi", postParam3).then(function(result){
-      console.log(33333);
+      console.log("----------" + result);
       if (result == "success") {
         // 获取列表
         var postParam3 = {
@@ -638,7 +645,6 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
           // var replaceStr6 = replaceStr5.replace(new RegExp(/,\"Closed/g),"\",\"Closed");
           
           // var finalStr = replaceStr6.replace(new RegExp(/,\"Desc/g),"\",\"Desc");
-          console.log(4444444);
           console.log(topicList);
 
           var topicArr = JSON.parse(topicList);
@@ -667,10 +673,12 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
 export var getBoardList = function () {
   return new Promise ((resolve) => {
     dechatmanagement.getBoardlist(1,function(err, result){
+      console.log(result);
       var boardList = [];
       
       var arr1 = result[0];
       var arr2 = result[1];
+      var arr3 = result[2];
 
       var subAddrArr = [];
       var dlsAdminArr = [];
@@ -678,6 +686,7 @@ export var getBoardList = function () {
       var rpcIpArr = [];
       var boardNameArr = [];
       var picPathArr = [];
+      var exchangeRateArr = [];
 
       for (key in arr1) {
         
@@ -698,11 +707,16 @@ export var getBoardList = function () {
           rpcIpArr.push(utf8HexToStr(arr2[key].substring(2)));
         }
         if (key % 3 == 1) {
-          console.log(arr2[key].substring(2));
           boardNameArr.push(utf8HexToStr(arr2[key].substring(2)));
         }
         if (key % 3 == 2) {
           picPathArr.push(utf8HexToStr(arr2[key].substring(2)));
+        }
+      }
+
+      for (key in arr3) {
+        if (key % 2 == 1) {
+          exchangeRateArr.push(arr3[key]);
         }
       }
 
@@ -713,6 +727,7 @@ export var getBoardList = function () {
       finalArr.push(rpcIpArr);
       finalArr.push(boardNameArr);
       finalArr.push(picPathArr);
+      finalArr.push(exchangeRateArr);
 
       for(var i = 0; i < subAddrArr.length; i++) {
         var board = {};
@@ -722,12 +737,37 @@ export var getBoardList = function () {
         board.rpcIp = finalArr[3][i];
         board.boardName = finalArr[4][i];
         board.picPath = finalArr[5][i];
+        board.exchangeRate = finalArr[6][i];
         boardList.push(board);
       }
       
       resolve(boardList);
     });
   });   
+}
+
+// 获取主链，子链当前区块高度，下一轮flush剩余区块数
+export var getBlockInfo = function (subChainAddr, rpcIp) {
+  return new Promise((resolve) => {
+    var blockInfo = {};
+    // 主链高度
+    mc.getBlockNumber(function (err, blockNumber) {
+      blockInfo.blockNumber = blockNumber;   // 主链高度
+
+      var postParam1 = { "SubChainAddr": subChainAddr };
+      getContractInfo(rpcIp, "ScsRPCMethod.GetBlockNumber", postParam1).then(function (subBlockNumber) {
+        blockInfo.subBlockNumber = subBlockNumber;  // 子链高度
+        var subchainInstance = getInstance(subChainAddr);
+
+        subchainInstance.getFlushInfo(function (err, flushNumber) {
+          blockInfo.flushNumber = flushNumber;  // 下一轮flush剩余区块数
+          resolve(blockInfo);
+        });
+      });
+    });
+
+  });
+
 }
 
 function converHex(intValue) {   // 确保返回的是两位，单个的前面加0

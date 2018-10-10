@@ -14,27 +14,11 @@ var mc = chain3.mc;
 // var basename = config.pwd;
 
 
-export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code,n, privateKey)
+export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code, n, privateKey)
 {
 	
 	return new Promise(function(resolve, reject){
 		
-		
-		// chain3.mc.sendTransaction(
-		// 	{
-		// 		from: baseaddr,
-		// 		value:chain3.toSha(amount,'mc'),
-		// 		to: subchainaddr,
-		// 		gas: '0',//'200000',
-		// 		gasPrice: '0',//chain3.mc.gasPrice,
-		// 		ShardingFlag: '0x1',
-		// 		data: code,
-		// 		nonce: n,
-		// 		via: config.via
-		// 	}, function (err, res) {
-		// 		resolve("111");
-			
-		// 	})
 		chain3.version.getNetwork(function (err, version) {
 			var rawTx = {
 				nonce: chain3.intToHex(n),
@@ -71,6 +55,7 @@ export function createTopicSol(userAddr, pwd, amount, expblk, desc, subchainaddr
 	
 	var award=chain3.toSha(amount,'mc')
 	var data=deChatInstance.createTopic.getData(award, expblk, desc)
+	console.log(data);
 	sendshardingflagtx(userAddr, pwd,subchainaddr,amount,data,nonce, privatekey);
 }
 

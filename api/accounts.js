@@ -46,7 +46,7 @@ import Hash from 'eth-lib/lib/hash';
 import RLP from 'eth-lib/lib/rlp';
 import Nat from 'eth-lib/lib/nat';
 import Bytes from 'eth-lib/lib/bytes';
-import cryp from 'crypto';
+import cryp from 'crypto-browserify';
 import scryptsy from 'scrypt.js';
 import uuid from 'uuid';
 import utils from 'web3-utils';

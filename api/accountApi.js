@@ -1,7 +1,7 @@
 import secp256k1 from 'secp256k1';
 import keccak from 'keccak';
 import {_post} from "./HttpFecth"
-import {encrypt} from "./accounts"
+//import {encrypt} from "./accounts"
 import {decrypt} from "./accounts"
 import {testbuyMintToken} from "./scAccount"
 import {testrequestEnterMicrochain} from "./scAccount"
@@ -9,8 +9,9 @@ import {dappredeemFromMicroChain} from "./scAccount"
 import {testsellMintToken} from "./scAccount"
 import {getMicroChainBalance} from "./bussApi"
 import {AsyncStorage} from 'react-native';
-
-import crypto from 'crypto';
+import {sendtx} from './scAccount'
+import {currentNonce} from './bussApi'
+//import crypto from 'crypto-browserify';
 
 import config from "./lwconfig.json"
 import assert from "assert"
@@ -170,7 +171,7 @@ export var getBalance = function (userAddr, marketableTokenAddr) {
 
 
 // 充值（moac兑换主链token, 然后充值进子链）
-export var chargeToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr) {
+export var chargeToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, exchangeRate) {
 	return new Promise((resolve, reject) => {
 		//var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
 
@@ -182,7 +183,7 @@ export var chargeToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 				try {
 					getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
 						console.log("充值兑换前---------" + JSON.stringify(balance1));
-						testbuyMintToken(userAddr, pwd, value,privatekey, subChainAddr); // moac兑换主链erc20
+						testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr); // moac兑换主链erc20
 		
 						var interval = setInterval(function(){
 							console.log("wait for buyToken-----");
@@ -191,7 +192,7 @@ export var chargeToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 									console.log("充值兑换后---------" + JSON.stringify(balance2));
 									console.log("开始子链充值-----");
 									
-									testrequestEnterMicrochain(userAddr, pwd, chain3.toSha(value, 'mc'),    // 兑换成功则执行子链充值，并跳出interval
+									testrequestEnterMicrochain(userAddr, pwd, chain3.toSha(value * exchangeRate, 'mc'),    // 兑换成功则执行子链充值，并跳出interval
 										privatekey, subChainAddr).then((data) => {
 											if (data == "success") {
 												resolve(1);    // 充值流程开始后，返回给前台1
@@ -225,7 +226,7 @@ export var buyToken = function (userAddr, value) {
 
 
 // 提币
-export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp) {
+export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp, exchangeRate) {
 	return new Promise((resolve, reject) => {
 		//var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
 
@@ -242,10 +243,8 @@ export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 					  getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
 						dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr).then((data) => {   // 提币
 							if (data == "success") {
-								console.log("start1-----------");
 								// 开始调用定时器
-								redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1);
-								console.log("start2-----------");
+								redeemTimer(userAddr, pwd, value / exchangeRate, privatekey, subChainAddr, marketableTokenAddr, balance1);
 								resolve(1);
 								// var interval = setInterval(function () {
 								// 	console.log("wait for redeemToken-----");
@@ -278,6 +277,60 @@ export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 	
 }
 
+// moac转账
+export var transferMoac = function (from, to, amount, pwd, keystore) {
+	return new Promise((resolve) => {
+		//var privatekey = decrypt(keystore, pwd).privateKey + "";
+		AsyncStorage.getItem(from, (error, privatekey) => {
+			sendtx(from, to, amount, "", privatekey).then((data) => {
+				if (data == "success") {
+					resolve(1);
+				} else {
+					resolve(0);
+				}
+			});
+		});
+		
+	});
+}	
+
+
+// coin转账
+export var transferCoin = function (from, to, amount, subChainAddr, pwd, keystore) {
+	return new Promise(function(resolve, reject){
+		//var privatekey = decrypt(keystore, pwd).privateKey + "";
+		AsyncStorage.getItem(from, (error, privatekey) => {
+			chain3.version.getNetwork(function (err, version) {
+				var rawTx = {
+					nonce: chain3.intToHex(currentNonce()),
+					from: from,
+					gas: '0x0',
+					gasLimit: '0x0',//chain3.intToHex(0),
+					gasPrice: '0x0',//chain3.intToHex(0),
+					to: subChainAddr, 
+					value: chain3.toHex(chain3.toSha(amount, 'mc')),
+					data: to,  
+					shardingFlag: '0x2',
+					chainId: chain3.intToHex(version),
+					via: config.via
+				}
+				signedTx = chain3.signTransaction(rawTx, privatekey)
+				chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
+					if (!err) {
+						resolve(1);
+		
+					} else {
+						console.log(err);
+						resolve(0);
+					}
+				});
+			});
+		});
+		
+	});	
+}
+
+
 // 提币定时器
 function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1) {
 	var interval = setInterval(function () {
@@ -293,6 +346,8 @@ function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableT
 		});
 	}, 180000);
 }
+
+
 
 // var myNonce = 0;
 // // 登录成功，调用获取当前nonce
