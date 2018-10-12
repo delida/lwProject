@@ -24,7 +24,12 @@ import {getItem} from './api/accountApi';
 import {getBlockInfo} from './api/bussApi';
 import {transferCoin} from './api/accountApi';
 import {transferMoac} from './api/accountApi';
+import {getHttpInfo} from './api/bussApi';
+import {getCnNames} from './api/bussApi';
+import {testbuyMintToken} from './api/scAccount';
+import {myHistoryList} from './api/accountApi';
 
+// import youdao from 'youdao-node';
 import config from "./api/lwconfig.json"
 
 
@@ -52,6 +57,7 @@ export default class App extends React.Component {
       r:''
      }
    }
+
   testFetch1() {
     setNonce(config.subChainAddr,config.userAddr1, config.rpcIp).then((data) => {
 
@@ -99,6 +105,17 @@ export default class App extends React.Component {
 
   renderTest() {
 
+    // myHistoryList(0, 0, config.userAddr2, config.subChainAddr, config.rpcIp).then ((data) => {
+    //   console.log(data);
+    // });
+
+    //testbuyMintToken(config.userAddr2, "moac", "10", "0xb15132deb02906c665debda4905f6dc4cd82ddcb31436486bf0881303b5f7cba", "0xdfb59956eaeb2ccc78c013e45c09e6f4c7283523");
+
+
+    // getCnNames(["test", "person", "sports"]).then((data) => {
+    //   console.log(data);
+    // });
+
     //---------account--------------
 
     // 版块管理  yes
@@ -116,7 +133,7 @@ export default class App extends React.Component {
     //console.log(registerUser("123456"));
 
     // 登录账户     yes
-    //console.log(loginUser(config.userAddr1, config.pwd, keystore_youTest));
+    //console.log(loginUser(config.userAddr2, config.pwd, keystore_myTest));
 
     // 获取moac和erc20余额     yes
     // getBalance(config.userAddr2, config.marketableTokenAddr).then((data) => {
@@ -125,7 +142,7 @@ export default class App extends React.Component {
     // });
 
     // 充值   yes
-    // chargeToken(config.userAddr2, 200, config.marketableTokenAddr, 
+    // chargeToken(config.userAddr2, 20, config.marketableTokenAddr, 
     //   config.pwd, keystore_myTest, config.subChainAddr, 10).then((data) => {
     //      console.log(data);
     // })
@@ -139,7 +156,7 @@ export default class App extends React.Component {
     // 创建问题
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   createTopic(1, "测试第一个问题?", 500, 
+    //   createTopic(1, "测试第二个问题?", 500, 
     //   config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
     //     console.log(data);
     //   })
@@ -153,10 +170,10 @@ export default class App extends React.Component {
     //  });
 
     // 创建回答
-    // setNonce(config.subChainAddr,config.userAddr1, config.rpcIp).then((data) => {
+    // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   createSubTopic("0x98d35a66e329756e13c71847e58d6fce28a3ac24cc96ae53c88dcb56c8bd47d5", 
-    //     "第一个回答", config.userAddr1, config.pwd, keystore_youTest, config.subChainAddr, config.rpcIp).then((data) => {
+    //   createSubTopic("0xbaa3d56a0d6b56d02deca97164c7297eb6259d639330dcba3a6625014533661b", 
+    //     "第一个回答", config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
     //     console.log(data);
     //   });
 
@@ -164,7 +181,7 @@ export default class App extends React.Component {
 
 
     // 回答列表(暂未做分页)    yes   0x87745f3b2db17acc69f6c9fe7e531f95a974d3bd4729ccbf18e0a4a658373619
-    // getSubTopicList("0x98d35a66e329756e13c71847e58d6fce28a3ac24cc96ae53c88dcb56c8bd47d5",
+    // getSubTopicList("0x6df12fe71d0d55ccf5ade9c6a5721eea82a848a9c9e4f6af50c5ad90e3896ca4",
     //      0,0, config.subChainAddr,config.rpcIp, 2).then((data) => {
     //        console.log(data);
     // });
@@ -241,9 +258,6 @@ export default class App extends React.Component {
     // config.userAddr1, config.pwd, keystore_youTest, config.subChainAddr, config.rpcIp).then((data) => {
     //   console.log(data);
     // })
-    
-
-    
 
     // 创建subTopic   
     // 0x2ae964d3f6e550e335fa662c92f39b6b55aed8a5c02af954aac1a63a473bec2f
@@ -263,8 +277,8 @@ export default class App extends React.Component {
 
 
     // 获取子链余额   yes
-    // getMicroChainBalance(config.userAddr1, config.pwd, "", config.subChainAddr, config.rpcIp).then((data) => {
-    //   this.setState({r:data});
+    // getMicroChainBalance(config.userAddr2, config.pwd, "", config.subChainAddr, config.rpcIp).then((data) => {
+    //   console.log(data);
     // });
 
     // autoCheck

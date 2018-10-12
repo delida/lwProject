@@ -1,6 +1,7 @@
 import config from './lwconfig';
 
 import {_post} from "./HttpFecth"
+import {_get} from "./HttpFecth"
 import {decrypt} from "./accounts"
 import {createTopicSol} from "./subchainclient.js"
 import {createSubTopicSol} from "./subchainclient.js"
@@ -8,6 +9,7 @@ import {voteOnTopic} from "./subchainclient.js"
 import {autoCheckSol} from "./subchainclient.js"
 import {AsyncStorage} from 'react-native';
 import {getInstance} from "./scAccount.js";
+import { promises } from 'fs';
 //import { resolveCname } from 'dns';
 
 
@@ -89,6 +91,23 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
 
     });
      
+};
+
+export var getHttpInfo = function(word) {
+  
+  return new Promise(function(resolve, reject){
+    var rpcIp = "http://fanyi.youdao.com/openapi.do?keyfrom=f2ec-org&key=1787962561&type=data&doctype=json&version=1.1&q=" + word;
+      _get(rpcIp, null).then((datas) => {
+        if (datas != undefined && datas.translation != undefined) {
+          resolve(datas.translation[0]);
+        } else {
+          resolve(word);
+        }
+        
+      }); 
+
+  });
+   
 };
 
 var t = Date.now();  
@@ -409,11 +428,14 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
   var result = {};
 	return new Promise((resolve) => { 
     checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
+      console.log(111111);
       if (data == 0 && type == 1) {
+        console.log(22222);
         result.isEnable = 0;
         result.subTopicList = [];
         resolve(result);  // 问题已经过期
       } else {
+        console.log(3333);
         var topicHashByte = Hexstring2btye(topicHash.substring(2));
 	var postParam1 = {"SubChainAddr": subChainAddr,
 		"Request": [
@@ -431,6 +453,7 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 	//for (var i = 0; i < parseInt(topicNum); i++) {   // parseInt(topicNum)
 	//for (var i = (pageNum - 1) * 3; i < pageNum * pageSize; i++) {   // parseInt(topicNum)
 	getContractInfo(rpcIp,"ScsRPCMethod.GetContractInfo", postParam1).then(function(subTopicHashArr){
+    console.log(subTopicHashArr);
 		var values = [];
 		var countFlag = 0;
 		for (var k in subTopicHashArr) {
@@ -553,8 +576,11 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 export var getMicroChainBalance = function (userAddr, pwd, keystore, subChainAddr, rpcIp) {
 	var postParam = {"SubChainAddr": subChainAddr,"Sender": userAddr};
 	return getContractInfo(rpcIp, "ScsRPCMethod.GetBalance", postParam).then(function(tokenBalance){
-		//console.log(tokenBalance / Math.pow(10, decimals));
-		return tokenBalance / Math.pow(10, decimals);
+    var balanceRes = 0;
+    if (tokenBalance != undefined && tokenBalance != NaN) {
+      balanceRes = tokenBalance / Math.pow(10, decimals);
+    }
+		return balanceRes;
 	})
 }
 
@@ -669,7 +695,103 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
   });   
 }
 
+// 获取批量中文名称
+export var getCnNames = function (names) {
+  return new Promise((resolve) => {
+    var cnNames = [];
+    var flag = 0;
+    names.forEach(function (item) {
+      getHttpInfo(item).then((data) => {
+        cnNames.push(data);
+        flag++;
+        if (flag == names.length) {
+          resolve(cnNames);
+        }
+      });
+    });
+    
+    
+  });
+  
+}
+
 // 获取版块列表
+// export var getBoardList = function () {
+//   return new Promise ((resolve) => {
+//     dechatmanagement.getBoardlist(1,function(err, result){
+//       var boardList = [];
+      
+//       var arr1 = result[0];
+//       var arr2 = result[1];
+//       var arr3 = result[2];
+
+//       var subAddrArr = [];
+//       var dlsAdminArr = [];
+//       var marketableTokenArr = [];
+//       var rpcIpArr = [];
+//       var boardNameArr = [];
+//       var picPathArr = [];
+//       var exchangeRateArr = [];
+
+//       for (key in arr1) {
+        
+//         if (key % 3 == 0) {
+//           subAddrArr.push(arr1[key]);
+//         }
+//         if (key % 3 == 1) {
+//           dlsAdminArr.push(arr1[key]);
+//         }
+//         if (key % 3 == 2) {
+//           marketableTokenArr.push(arr1[key]);
+//         }
+//       }
+
+//       for (key in arr2) {
+        
+//         if (key % 3 == 0) {
+//           rpcIpArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//         if (key % 3 == 1) {
+//           boardNameArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//         if (key % 3 == 2) {
+//           picPathArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//       }
+
+//       for (key in arr3) {
+//         if (key % 2 == 1) {
+//           exchangeRateArr.push(arr3[key]);
+//         }
+//       }
+
+//       var finalArr = [];
+//       getCnNames(boardNameArr).then((boardNameCnArr) => {
+//         finalArr.push(subAddrArr);
+//         finalArr.push(dlsAdminArr);
+//         finalArr.push(marketableTokenArr);
+//         finalArr.push(rpcIpArr);
+//         finalArr.push(boardNameCnArr);
+//         finalArr.push(picPathArr);
+//         finalArr.push(exchangeRateArr);
+
+//         for (var i = 0; i < subAddrArr.length; i++) {
+//           var board = {};
+//           board.subChainAddress = finalArr[0][i];
+//           board.deployLwSolAdmin = finalArr[1][i];
+//           board.marketableTokenAddr = finalArr[2][i];
+//           board.rpcIp = finalArr[3][i];
+//           board.boardName = finalArr[4][i];
+//           board.picPath = finalArr[5][i];
+//           board.exchangeRate = finalArr[6][i];
+//           boardList.push(board);
+//         }
+//         resolve(boardList);
+//       });
+      
+//     });
+//   });   
+// }
 export var getBoardList = function () {
   return new Promise ((resolve) => {
     dechatmanagement.getBoardlist(1,function(err, result){
@@ -752,6 +874,7 @@ export var getBlockInfo = function (subChainAddr, rpcIp) {
     var blockInfo = {};
     // 主链高度
     mc.getBlockNumber(function (err, blockNumber) {
+      
       blockInfo.blockNumber = blockNumber;   // 主链高度
 
       var postParam1 = { "SubChainAddr": subChainAddr };
@@ -760,6 +883,7 @@ export var getBlockInfo = function (subChainAddr, rpcIp) {
         var subchainInstance = getInstance(subChainAddr);
 
         subchainInstance.getFlushInfo(function (err, flushNumber) {
+          //console.log("flushNumber----------"+ flushNumber);
           blockInfo.flushNumber = flushNumber;  // 下一轮flush剩余区块数
           resolve(blockInfo);
         });

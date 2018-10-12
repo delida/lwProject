@@ -56,19 +56,19 @@ export function getInstance(subChainAddr) {
 }
 	
 
-	// moac兑换erc20
+// moac兑换erc20
 export	function testbuyMintToken(sender, passwd, pay, privateKey, subChainAddr)
-	{
-		var data=getInstance(subChainAddr).buyMintToken.getData();
-		sendtx(sender, subChainAddr, pay, data, privateKey);
-	}
+{
+	var data=getInstance(subChainAddr).buyMintToken.getData();
+	sendtx(sender, subChainAddr, pay, data, privateKey);
+}
 
-	// erc20兑换moac
-	export	function testsellMintToken(sender, passwd, amount, privateKey, subChainAddr)
-	{
-		var data=getInstance(subChainAddr).sellMintToken.getData(amount);
-		sendtx(sender, subChainAddr, '0', data, privateKey);
-	}
+// erc20兑换moac
+export	function testsellMintToken(sender, passwd, amount, privateKey, subChainAddr)
+{
+	var data=getInstance(subChainAddr).sellMintToken.getData(amount);
+	sendtx(sender, subChainAddr, '0', data, privateKey);
+}
 
 	// 充值
 	export	function testrequestEnterMicrochain(sender, passwd, amount, privateKey, subChainAddr)
