@@ -247,7 +247,7 @@ export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 						dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr).then((data) => {   // 提币
 							if (data == "success") {
 								// 开始调用定时器
-								redeemTimer(userAddr, pwd, value / exchangeRate, privatekey, subChainAddr, marketableTokenAddr, balance1);
+								redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1);
 								resolve(1);
 								// var interval = setInterval(function () {
 								// 	console.log("wait for redeemToken-----");
