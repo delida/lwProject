@@ -300,32 +300,30 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                         }
                       }
                       
-                      var blankIndex = descStr.indexOf('0000');
-                      if (blankIndex > 0) {
-                        topic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
-                      } else {
-                        topic.desc = utf8HexToStr(descStr);
-                      }
+                      // var blankIndex = descStr.indexOf('0000');
+                      // if (blankIndex > 0) {
+                      //   topic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
+                      // } else {
+                      //   topic.desc = utf8HexToStr(descStr);
+                      // }
+                      topic.desc = utf8HexToStr(descStr).replace(/\s+/g,"");
                       
                   } else {
                     // 代表内容
                     var blankIndex = descFlag.substring(2).indexOf('0000');
-                        if (blankIndex > 0) {
-                          topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
-                        } else {
-                          topic.desc = utf8HexToStr(descFlag.substring(2));
-                        }
+                        // if (blankIndex > 0) {
+                        //   topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
+                        // } else {
+                        //   topic.desc = utf8HexToStr(descFlag.substring(2));
+                        // }
+                        topic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");;
                   }
-                  //console.log(topic);
                   
                   // 统计Step
                   // 处理完所有后返回
                   topicArr.push(topic);
                   flag++;
-                  //console.log(flag);
-                  //console.log(parseInt(topicNum, 16) - 1);
                   if (flag == topicNum ) {  // 循环从0开始
-                    console.log(topicArr.sort(compareByTime));
                     resolve(topicArr.sort(compareByTime))
                   }
                 } else {
@@ -334,7 +332,6 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                   flag++;
                   if (flag == topicNum ) {  // 循环从0开始
                     
-                    console.log(topicArr.sort(compareByTime));
                     resolve(topicArr.sort(compareByTime))
                   }
                 }
@@ -345,7 +342,7 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
       }
     }).catch(reject)
   }).catch(err => {
-		console.log('getTopicList inner Promise error')
+		console.log('获取问题列表promise异常')
 		console.log(err)
 	})
 }
@@ -362,8 +359,6 @@ export var createSubTopic = function (topicHash, desc, userAddr, pwd, keystore, 
         result.isSuccess = 2;  // 问题已经过期
         resolve(result);  
       } 
-
-
 
     //var privatekey = decrypt(keystore, pwd).privateKey + "";
     AsyncStorage.getItem(userAddr, (error, privatekey) => {
@@ -428,14 +423,11 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
   var result = {};
 	return new Promise((resolve) => { 
     checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
-      console.log(111111);
       if (data == 0 && type == 1) {
-        console.log(22222);
         result.isEnable = 0;
         result.subTopicList = [];
         resolve(result);  // 问题已经过期
       } else {
-        console.log(3333);
         var topicHashByte = Hexstring2btye(topicHash.substring(2));
 	var postParam1 = {"SubChainAddr": subChainAddr,
 		"Request": [
@@ -453,7 +445,6 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 	//for (var i = 0; i < parseInt(topicNum); i++) {   // parseInt(topicNum)
 	//for (var i = (pageNum - 1) * 3; i < pageNum * pageSize; i++) {   // parseInt(topicNum)
 	getContractInfo(rpcIp,"ScsRPCMethod.GetContractInfo", postParam1).then(function(subTopicHashArr){
-    console.log(subTopicHashArr);
 		var values = [];
 		var countFlag = 0;
 		for (var k in subTopicHashArr) {
@@ -511,7 +502,6 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
                       subTopic.reward = reward;
                       
                       var descFlag = subTopicResult[prefixStr + converHex(suffixInt + 2)];
-                      //console.log("---------" + descFlag);
 		                	if (descFlag.length < 7) {
 		              		  	// 长string, 这里代表长度，需要连接
 		    	                var descStr = chain3.sha3(prefixStr + converHex(suffixInt + 2), 
@@ -528,21 +518,22 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 		    	                  }
 		    	                }
 		    	              	
-		    	              	var blankIndex = descStr.indexOf('0000');
-		    	                if (blankIndex > 0) {
-		    	                	subTopic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
-		    	                } else {
-		    	                	subTopic.desc = utf8HexToStr(descStr);
-		    	                }
-		                  	
+		    	              	// var blankIndex = descStr.indexOf('0000');
+		    	                // if (blankIndex > 0) {
+		    	                // 	subTopic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
+		    	                // } else {
+		    	                // 	subTopic.desc = utf8HexToStr(descStr);
+		    	                // }
+                          subTopic.desc = utf8HexToStr(descStr).replace(/\s+/g,"");
 		    	          	} else {
-		    	          		// 代表内容
-		    	          		var blankIndex = descFlag.substring(2).indexOf('0000');
-		    	                  if (blankIndex > 0) {
-		    	                	  subTopic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
-		    	                  } else {
-		    	                	  subTopic.desc = utf8HexToStr(descFlag.substring(2));
-		    	                  }
+                          // 代表内容
+                          // var blankIndex = descFlag.substring(2).indexOf('0000');
+                          // if (blankIndex > 0) {
+                          //   subTopic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
+                          // } else {
+                          //   subTopic.desc = utf8HexToStr(descFlag.substring(2));
+                          // }
+                          subTopic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");
 		    	                  
 		    	          	}
 		                	
@@ -653,7 +644,6 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
       "Data": config.lwAbi
     };
     getContractInfo(rpcIp, "ScsRPCMethod.SetDappAbi", postParam3).then(function(result){
-      console.log("----------" + result);
       if (result == "success") {
         // 获取列表
         var postParam3 = {
@@ -671,7 +661,7 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
           // var replaceStr6 = replaceStr5.replace(new RegExp(/,\"Closed/g),"\",\"Closed");
           
           // var finalStr = replaceStr6.replace(new RegExp(/,\"Desc/g),"\",\"Desc");
-          console.log(topicList);
+          //console.log("---------" + topicList);
 
           var topicArr = JSON.parse(topicList);
           
