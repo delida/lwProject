@@ -7,6 +7,7 @@ contract DappBase {
 	struct RedeemMapping {
         address[] userAddr;
         uint[] userAmount;
+        uint[] time;
     }
     
     struct Task{
@@ -28,6 +29,7 @@ contract DappBase {
 	function redeemFromMicroChain() public payable {//The user takes the coin to the main chain erc20
         redeem[block.number].userAddr.push(msg.sender);
         redeem[block.number].userAmount.push(msg.value);
+        redeem[block.number].time.push(now);
     }
     
     function have(address[] addrs, address addr) public view returns (bool) {
