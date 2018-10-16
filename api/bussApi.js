@@ -239,14 +239,14 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                 {
                   "Reqtype": 2,
                   "Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
-                    "Position": Hexstring2btye(key),
-                  "Structformat": [51,49,51,49,49,49,51,49,51,49]
+                  "Position": Hexstring2btye(key),
+                  "Structformat": [49,49,51,49,49,49,49,49,49,49,49,49]
                   
                 }
               ]
             };
             getContractInfo(rpcIp,"ScsRPCMethod.GetContractInfo", postParam3).then(function(topicResult){
-              
+             // console.log(topicResult);
               // 当前区块高度
               var postParam4 = {
                 "SubChainAddr": subChainAddr
@@ -266,6 +266,7 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
               
               
               var award = topicResult[prefixStr + converHex(suffixInt + 3)]; 
+              
               var startBlock = topicResult[prefixStr + converHex(suffixInt + 4)];
               var startBlockNum = chain3.toDecimal('0x' + startBlock.substring(2));
               // if (award == undefined) {
@@ -282,9 +283,20 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                   topic.owner = owner; 
                   topic.award = chain3.toDecimal('0x' + award.substring(2)) / Math.pow(10, decimals);
                   // topic.duration = duration;
+                  var status = topicResult[prefixStr + converHex(suffixInt + 11)];
+                  if (status == null || status == undefined) {  // 兼容之前版本
+                    topic.status = 0;
+                  } else if (status == "01"){
+                    topic.status = 1;
+                  } else {
+                    topic.status = 0;
+                  }
                   
                   var descFlag = topicResult[prefixStr + converHex(suffixInt + 2)];
-                  if (descFlag.length < 7) {
+                  if (topic.status == 1) {   // 屏蔽，含有敏感词汇
+                    topic.desc = config.sensitiveInfo;
+                  } else {
+                    if (descFlag.length < 7) {
                       // 长string, 这里代表长度，需要连接
                       var descStr = chain3.sha3(prefixStr + converHex(suffixInt + 2), 
                       {"encoding": "hex"}).substring(2);  // 再做一次hash获取字符串第一部分的key
@@ -310,6 +322,7 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                       
                   } else {
                     // 代表内容
+                    console.log("---------" + descFlag);
                     var blankIndex = descFlag.substring(2).indexOf('0000');
                         // if (blankIndex > 0) {
                         //   topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
@@ -318,6 +331,8 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                         // }
                         topic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");;
                   }
+                  }
+                  
                   
                   // 统计Step
                   // 处理完所有后返回
@@ -470,7 +485,7 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 									"Reqtype": 2,
 									"Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
 						    	"Position": Hexstring2btye(key),
-									"Structformat": [51, 49, 51, 49, 51, 49, 50]
+									"Structformat": [49, 49, 51, 49, 49, 49, 50, 49]
 								}
 							]
 					};
@@ -501,8 +516,20 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 		                	subTopic.voteCount = voteCount;
                       subTopic.reward = reward;
                       
+                      var status = subTopicResult[prefixStr + converHex(suffixInt + 7)];
+                      if (status == null || status == undefined) {  // 兼容之前版本
+                        subTopic.status = 0;
+                      } else if (status == "01"){
+                        subTopic.status = 1;
+                      } else {
+                        subTopic.status = 0;
+                      }
+
                       var descFlag = subTopicResult[prefixStr + converHex(suffixInt + 2)];
-		                	if (descFlag.length < 7) {
+                      if (subTopic.status == 1) {   // 屏蔽，含有敏感词汇
+                        subTopic.desc = config.sensitiveInfo;
+                      } else {
+                        if (descFlag.length < 7) {
 		              		  	// 长string, 这里代表长度，需要连接
 		    	                var descStr = chain3.sha3(prefixStr + converHex(suffixInt + 2), 
 		    	                {"encoding": "hex"}).substring(2);  // 再做一次hash获取字符串第一部分的key
@@ -536,6 +563,7 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
                           subTopic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");
 		    	                  
 		    	          	}
+                      }
 		                	
 		                	subTopicArr.push(subTopic);
 		    	            flag++;
@@ -653,6 +681,7 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
         };
         getContractInfo(rpcIp,"ScsRPCMethod.AnyCall", postParam3).then(function(topicList){
           
+          //console.log(topicList);
           // var replaceStr1 = topicList.replace(new RegExp(/\"Hash\":/g),"\"Hash\":\"");
           // var replaceStr2 = replaceStr1.replace(new RegExp(/,\"Owner\":/g),"\",\"Owner\":");
           // var replaceStr3 = replaceStr2.replace(new RegExp(/Owner\":/g),"Owner\":\"");
@@ -673,7 +702,15 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
             myTopic.owner = "0x" + topicArr[key].Owner;
             myTopic.award = chain3.fromSha(topicArr[key].Award, 'mc');
             myTopic.duration = topicArr[key].Expblk * config.packPerBlockTime;
-            myTopic.desc = topicArr[key].Desc;
+            
+            if (topicArr[key].Status == 1) {  // 屏蔽，敏感词汇
+              myTopic.status = 1;
+              myTopic.desc = config.sensitiveInfo;
+            } else {
+              myTopic.status = 0;
+              myTopic.desc = topicArr[key].Desc;
+            }
+            
             finalArr.push(myTopic);
           }
           resolve(finalArr);
@@ -945,7 +982,7 @@ function checkTime (subChainAddr, topicHash,rpcIp,topicIndex ) {
           "Reqtype": 2,
           "Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
             "Position": Hexstring2btye(topicHash.substring(2)),
-          "Structformat": [51,49,51,49,49,49,51,49,51,49]
+          "Structformat": [49,49,51,49,49,49,49,49,49,49,49,49]
           
         }
       ]
