@@ -7,6 +7,7 @@ contract DappBase {
 	struct RedeemMapping {
         address[] userAddr;
         uint[] userAmount;
+        uint[] time;
     }
     
     struct Task{
@@ -28,6 +29,7 @@ contract DappBase {
 	function redeemFromMicroChain() public payable {//The user takes the coin to the main chain erc20
         redeem[block.number].userAddr.push(msg.sender);
         redeem[block.number].userAmount.push(msg.value);
+        redeem[block.number].time.push(now);
     }
     
     function have(address[] addrs, address addr) public view returns (bool) {
@@ -93,6 +95,7 @@ contract DeChat is DappBase{
 		uint secondBestVoteCount;
 		bytes32 secondBestHash;
 		bool closed;
+		uint status;
 	}
 
 	struct subTopic {
@@ -103,6 +106,7 @@ contract DeChat is DappBase{
 		bytes32 parent;
 		uint voteCount;
 		address[] voters;
+		uint status;
 	}
 	
 	mapping(bytes32 => topic) public topics;
@@ -148,6 +152,8 @@ contract DeChat is DappBase{
 		}
 		topics[hash].startblk = block.number;
 		topics[hash].desc = desc;
+		topics[hash].closed = false;
+		topics[hash].status = 0;
 		//add loop value
 		expinfo[block.number + expblk].push(hash);
 		newTopicIndex[hash]=newTopicList.length;
@@ -205,6 +211,7 @@ contract DeChat is DappBase{
 		subTopics[hash].desc = desc;
 		subTopics[hash].reward = 0;
 		subTopics[hash].parent = parenthash;
+		subTopics[hash].status = 0;
 		//add to ans list
 		topicAns[parenthash].push(hash);
 		return hash;
@@ -226,6 +233,24 @@ contract DeChat is DappBase{
 		return myTopics[addr];
 	}
 	
+	function setTopicStatus(bytes32 hash, uint status)  public returns(bytes32) {
+		require(owner == msg.sender || moderator ==  msg.sender);
+		require(hash != bytes32(0));
+
+		topics[hash].status = status;
+		topic t = topics[hash];
+		updateMyTopic(t);
+		return hash;
+	}
+
+	function setSubTopicStatus(bytes32 hash, uint status)  public returns(bytes32) {
+		require(owner == msg.sender || moderator ==  msg.sender);
+		require(hash != bytes32(0));
+
+		subTopics[hash].status = status;
+		return hash;
+	}
+
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
 		for( uint i=lastProcBlk; i<block.number; i++ ) {
