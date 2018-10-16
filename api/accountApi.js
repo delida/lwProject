@@ -70,7 +70,8 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
     return new Promise(function(resolve, reject){
         _post(rpcIp, data).then((datas) => {
             //console.log("datas---------" + JSON.stringify(datas))
-            var rpcResult;
+			var rpcResult;
+			console.log(datas);
             //console.log(datas.result);
             if (datas.result == undefined) {
                 rpcResult == "have exception";
@@ -122,6 +123,8 @@ export function loginUser(addr, pwd, keystore) {
 		var decryptVal = decrypt(keystoreObj, pwd);
 		var address = decryptVal.address + '';
 		var privateKey = decryptVal.privateKey + '';
+		console.log(address.toLowerCase());
+		console.log(addr.toLowerCase());
 		if (address.toLowerCase() == addr.toLowerCase()) {
 			AsyncStorage.setItem(address.toLowerCase(), privateKey, (error) => {
 				if (error) {
@@ -244,7 +247,7 @@ export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, ke
 						dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr).then((data) => {   // 提币
 							if (data == "success") {
 								// 开始调用定时器
-								redeemTimer(userAddr, pwd, value / exchangeRate, privatekey, subChainAddr, marketableTokenAddr, balance1);
+								redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1);
 								resolve(1);
 								// var interval = setInterval(function () {
 								// 	console.log("wait for redeemToken-----");
@@ -330,6 +333,121 @@ export var transferCoin = function (from, to, amount, subChainAddr, pwd, keystor
 	});	
 }
 
+// 充值提币历史（充值包括进行中，已完成，   提币包括进行中，已完成。   时间倒叙）
+export function myHistoryList(pageNum, pageSize, userAddr, subChainAddr, rpcIp) {
+	var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
+	return new Promise ((resolve) => {
+		getContractInfo(rpcIp, "ScsRPCMethod.GetTransactionRecords", postParam).then(function(result){
+			var myHistory = {};
+			if (result != null && result != undefined) {
+				var enterList = [];
+				var redeemList = [];
+				var enteringAmt = result.EnteringAmt;
+				var enteringtime = result.Enteringtime;
+				var enterAmt = result.EnterAmt;
+				var entertime = result.Entertime;
+	
+				var redeemingAmt = result.RedeemingAmt;
+				var redeemingtime = result.Redeemingtime;
+				var redeemAmt = result.RedeemAmt;
+				var redeemtime = result.Redeemtime;
+	
+				// 充值记录
+				if (enteringAmt != null && enteringAmt != undefined) {   // 充值进行中
+					for (var i in enteringAmt) {
+						var enterInfo1 = {}; 
+						enterInfo1.status = 2;
+						enterInfo1.amount = chain3.fromSha(enteringAmt[i], "mc")
+						if (enteringtime[i] != null && enteringtime[i] != undefined) {
+							enterInfo1.timeStr = timestampToTime(enteringtime[i]);
+							enterInfo1.timeValue = enteringtime[i];
+						}
+						enterList.push(enterInfo1);
+		
+					}
+				}
+	
+				if (enterAmt != null && enterAmt != undefined) {   // 充值已完成
+					for (var i in enterAmt) {
+						var enterInfo2 = {}; 
+						enterInfo2.status = 1;
+						enterInfo2.amount = chain3.fromSha(enterAmt[i], "mc");
+						if (entertime[i] != null && entertime[i] != undefined) {
+							enterInfo2.timeStr = timestampToTime(entertime[i]);
+							enterInfo2.timeValue = entertime[i];
+						}
+						enterList.push(enterInfo2);
+					}
+				}
+				
+				
+	
+				// 提币记录
+				if (redeemingAmt != null && redeemingAmt != undefined) {   // 提币进行中
+					for (var i in redeemingAmt) {
+						var redeemInfo1 = {}; 
+						redeemInfo1.status = 2;
+						redeemInfo1.amount = chain3.fromSha(redeemingAmt[i], "mc");
+						if (redeemingtime[i] != null && redeemingtime[i] != undefined) {
+							redeemInfo1.timeStr = timestampToTime(redeemingtime[i]);
+							redeemInfo1.timeValue = redeemingtime[i];
+						}
+						redeemList.push(redeemInfo1);
+		
+					}
+				}
+	
+				if (redeemAmt != null && redeemAmt != undefined) {   // 提币已完成
+					for (var i in redeemAmt) {
+						var redeemInfo2 = {}; 
+						redeemInfo2.status = 1;
+						redeemInfo2.amount = chain3.fromSha(redeemAmt[i], "mc");
+						if (redeemtime[i] != null && redeemtime[i] != undefined) {
+							redeemInfo2.timeStr = timestampToTime(redeemtime[i]);
+							redeemInfo2.timeValue = redeemtime[i];
+						}
+						redeemList.push(redeemInfo2);
+					}
+				}
+	
+				// 时间倒叙
+				myHistory.enterList = enterList.sort(compareByTimeValue);
+				myHistory.redeemList = redeemList.sort(compareByTimeValue);
+	
+	
+			}
+			
+			resolve(myHistory);
+		});
+	});
+	
+}
+
+// 时间戳转日期
+function add0(m) { return m < 10 ? '0' + m : m }
+function timestampToTime(shijianchuo) {
+	//shijianchuo是整数，否则要parseInt转换
+	var time = new Date(shijianchuo  * 1000);
+	var y = time.getFullYear();
+	var m = time.getMonth() + 1;
+	var d = time.getDate();
+	var h = time.getHours();
+	var mm = time.getMinutes();
+	var s = time.getSeconds();
+	return y + '-' + add0(m) + '-' + add0(d) + ' ' + add0(h) + ':' + add0(mm) + ':' + add0(s);
+}
+
+// function timestampToTime(timestamp) {
+// 	var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
+// 	var Y = date.getFullYear() + '-';
+// 	var M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
+// 	var D = date.getDate() + ' ';
+// 	var h = date.getHours() + ':';
+// 	var m = date.getMinutes() + ':';
+// 	var s = date.getSeconds();
+// 	return Y+M+D+h+m+s;
+// }
+
 
 // 提币定时器
 function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1) {
@@ -393,3 +511,15 @@ export var removeItem = function(addr) {
 	});
 } 
 
+// 按照时间倒叙
+var compareByTimeValue = function (obj1, obj2) {
+	var val1 = obj1.timeValue;
+	var val2 = obj2.timeValue;
+    if (val1 < val2) {
+        return 1;
+    } else if (val1 > val2) {
+        return -1;
+    } else {
+        return 0;
+    }            
+} 

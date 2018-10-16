@@ -1,6 +1,7 @@
 import config from './lwconfig';
 
 import {_post} from "./HttpFecth"
+import {_get} from "./HttpFecth"
 import {decrypt} from "./accounts"
 import {createTopicSol} from "./subchainclient.js"
 import {createSubTopicSol} from "./subchainclient.js"
@@ -8,6 +9,7 @@ import {voteOnTopic} from "./subchainclient.js"
 import {autoCheckSol} from "./subchainclient.js"
 import {AsyncStorage} from 'react-native';
 import {getInstance} from "./scAccount.js";
+import { promises } from 'fs';
 //import { resolveCname } from 'dns';
 
 
@@ -89,6 +91,23 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
 
     });
      
+};
+
+export var getHttpInfo = function(word) {
+  
+  return new Promise(function(resolve, reject){
+    var rpcIp = "http://fanyi.youdao.com/openapi.do?keyfrom=f2ec-org&key=1787962561&type=data&doctype=json&version=1.1&q=" + word;
+      _get(rpcIp, null).then((datas) => {
+        if (datas != undefined && datas.translation != undefined) {
+          resolve(datas.translation[0]);
+        } else {
+          resolve(word);
+        }
+        
+      }); 
+
+  });
+   
 };
 
 var t = Date.now();  
@@ -281,32 +300,30 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                         }
                       }
                       
-                      var blankIndex = descStr.indexOf('0000');
-                      if (blankIndex > 0) {
-                        topic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
-                      } else {
-                        topic.desc = utf8HexToStr(descStr);
-                      }
+                      // var blankIndex = descStr.indexOf('0000');
+                      // if (blankIndex > 0) {
+                      //   topic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
+                      // } else {
+                      //   topic.desc = utf8HexToStr(descStr);
+                      // }
+                      topic.desc = utf8HexToStr(descStr).replace(/\s+/g,"");
                       
                   } else {
                     // 代表内容
                     var blankIndex = descFlag.substring(2).indexOf('0000');
-                        if (blankIndex > 0) {
-                          topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
-                        } else {
-                          topic.desc = utf8HexToStr(descFlag.substring(2));
-                        }
+                        // if (blankIndex > 0) {
+                        //   topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
+                        // } else {
+                        //   topic.desc = utf8HexToStr(descFlag.substring(2));
+                        // }
+                        topic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");;
                   }
-                  //console.log(topic);
                   
                   // 统计Step
                   // 处理完所有后返回
                   topicArr.push(topic);
                   flag++;
-                  //console.log(flag);
-                  //console.log(parseInt(topicNum, 16) - 1);
                   if (flag == topicNum ) {  // 循环从0开始
-                    console.log(topicArr.sort(compareByTime));
                     resolve(topicArr.sort(compareByTime))
                   }
                 } else {
@@ -315,7 +332,6 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                   flag++;
                   if (flag == topicNum ) {  // 循环从0开始
                     
-                    console.log(topicArr.sort(compareByTime));
                     resolve(topicArr.sort(compareByTime))
                   }
                 }
@@ -326,7 +342,7 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
       }
     }).catch(reject)
   }).catch(err => {
-		console.log('getTopicList inner Promise error')
+		console.log('获取问题列表promise异常')
 		console.log(err)
 	})
 }
@@ -343,8 +359,6 @@ export var createSubTopic = function (topicHash, desc, userAddr, pwd, keystore, 
         result.isSuccess = 2;  // 问题已经过期
         resolve(result);  
       } 
-
-
 
     //var privatekey = decrypt(keystore, pwd).privateKey + "";
     AsyncStorage.getItem(userAddr, (error, privatekey) => {
@@ -488,7 +502,6 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
                       subTopic.reward = reward;
                       
                       var descFlag = subTopicResult[prefixStr + converHex(suffixInt + 2)];
-                      //console.log("---------" + descFlag);
 		                	if (descFlag.length < 7) {
 		              		  	// 长string, 这里代表长度，需要连接
 		    	                var descStr = chain3.sha3(prefixStr + converHex(suffixInt + 2), 
@@ -505,21 +518,22 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 		    	                  }
 		    	                }
 		    	              	
-		    	              	var blankIndex = descStr.indexOf('0000');
-		    	                if (blankIndex > 0) {
-		    	                	subTopic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
-		    	                } else {
-		    	                	subTopic.desc = utf8HexToStr(descStr);
-		    	                }
-		                  	
+		    	              	// var blankIndex = descStr.indexOf('0000');
+		    	                // if (blankIndex > 0) {
+		    	                // 	subTopic.desc = utf8HexToStr(descStr.substring(0, blankIndex)); // 问题内容
+		    	                // } else {
+		    	                // 	subTopic.desc = utf8HexToStr(descStr);
+		    	                // }
+                          subTopic.desc = utf8HexToStr(descStr).replace(/\s+/g,"");
 		    	          	} else {
-		    	          		// 代表内容
-		    	          		var blankIndex = descFlag.substring(2).indexOf('0000');
-		    	                  if (blankIndex > 0) {
-		    	                	  subTopic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
-		    	                  } else {
-		    	                	  subTopic.desc = utf8HexToStr(descFlag.substring(2));
-		    	                  }
+                          // 代表内容
+                          // var blankIndex = descFlag.substring(2).indexOf('0000');
+                          // if (blankIndex > 0) {
+                          //   subTopic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
+                          // } else {
+                          //   subTopic.desc = utf8HexToStr(descFlag.substring(2));
+                          // }
+                          subTopic.desc = utf8HexToStr(descFlag.substring(2)).replace(/\s+/g,"");
 		    	                  
 		    	          	}
 		                	
@@ -553,8 +567,11 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
 export var getMicroChainBalance = function (userAddr, pwd, keystore, subChainAddr, rpcIp) {
 	var postParam = {"SubChainAddr": subChainAddr,"Sender": userAddr};
 	return getContractInfo(rpcIp, "ScsRPCMethod.GetBalance", postParam).then(function(tokenBalance){
-		//console.log(tokenBalance / Math.pow(10, decimals));
-		return tokenBalance / Math.pow(10, decimals);
+    var balanceRes = 0;
+    if (tokenBalance != undefined && tokenBalance != NaN) {
+      balanceRes = tokenBalance / Math.pow(10, decimals);
+    }
+		return balanceRes;
 	})
 }
 
@@ -627,7 +644,6 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
       "Data": config.lwAbi
     };
     getContractInfo(rpcIp, "ScsRPCMethod.SetDappAbi", postParam3).then(function(result){
-      console.log("----------" + result);
       if (result == "success") {
         // 获取列表
         var postParam3 = {
@@ -645,7 +661,7 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
           // var replaceStr6 = replaceStr5.replace(new RegExp(/,\"Closed/g),"\",\"Closed");
           
           // var finalStr = replaceStr6.replace(new RegExp(/,\"Desc/g),"\",\"Desc");
-          console.log(topicList);
+          //console.log("---------" + topicList);
 
           var topicArr = JSON.parse(topicList);
           
@@ -669,7 +685,103 @@ export var myTopicList = function (userAddr, subChainAddr, pwd,keystore, rpcIp, 
   });   
 }
 
+// 获取批量中文名称
+export var getCnNames = function (names) {
+  return new Promise((resolve) => {
+    var cnNames = [];
+    var flag = 0;
+    names.forEach(function (item) {
+      getHttpInfo(item).then((data) => {
+        cnNames.push(data);
+        flag++;
+        if (flag == names.length) {
+          resolve(cnNames);
+        }
+      });
+    });
+    
+    
+  });
+  
+}
+
 // 获取版块列表
+// export var getBoardList = function () {
+//   return new Promise ((resolve) => {
+//     dechatmanagement.getBoardlist(1,function(err, result){
+//       var boardList = [];
+      
+//       var arr1 = result[0];
+//       var arr2 = result[1];
+//       var arr3 = result[2];
+
+//       var subAddrArr = [];
+//       var dlsAdminArr = [];
+//       var marketableTokenArr = [];
+//       var rpcIpArr = [];
+//       var boardNameArr = [];
+//       var picPathArr = [];
+//       var exchangeRateArr = [];
+
+//       for (key in arr1) {
+        
+//         if (key % 3 == 0) {
+//           subAddrArr.push(arr1[key]);
+//         }
+//         if (key % 3 == 1) {
+//           dlsAdminArr.push(arr1[key]);
+//         }
+//         if (key % 3 == 2) {
+//           marketableTokenArr.push(arr1[key]);
+//         }
+//       }
+
+//       for (key in arr2) {
+        
+//         if (key % 3 == 0) {
+//           rpcIpArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//         if (key % 3 == 1) {
+//           boardNameArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//         if (key % 3 == 2) {
+//           picPathArr.push(utf8HexToStr(arr2[key].substring(2)));
+//         }
+//       }
+
+//       for (key in arr3) {
+//         if (key % 2 == 1) {
+//           exchangeRateArr.push(arr3[key]);
+//         }
+//       }
+
+//       var finalArr = [];
+//       getCnNames(boardNameArr).then((boardNameCnArr) => {
+//         finalArr.push(subAddrArr);
+//         finalArr.push(dlsAdminArr);
+//         finalArr.push(marketableTokenArr);
+//         finalArr.push(rpcIpArr);
+//         finalArr.push(boardNameCnArr);
+//         finalArr.push(picPathArr);
+//         finalArr.push(exchangeRateArr);
+
+//         for (var i = 0; i < subAddrArr.length; i++) {
+//           var board = {};
+//           board.subChainAddress = finalArr[0][i];
+//           board.deployLwSolAdmin = finalArr[1][i];
+//           board.marketableTokenAddr = finalArr[2][i];
+//           board.rpcIp = finalArr[3][i];
+//           board.boardName = finalArr[4][i];
+//           board.picPath = finalArr[5][i];
+//           board.exchangeRate = finalArr[6][i];
+//           boardList.push(board);
+//         }
+//         resolve(boardList);
+//       });
+      
+//     });
+//   });   
+// }
 export var getBoardList = function () {
   return new Promise ((resolve) => {
     dechatmanagement.getBoardlist(1,function(err, result){
@@ -752,6 +864,7 @@ export var getBlockInfo = function (subChainAddr, rpcIp) {
     var blockInfo = {};
     // 主链高度
     mc.getBlockNumber(function (err, blockNumber) {
+      
       blockInfo.blockNumber = blockNumber;   // 主链高度
 
       var postParam1 = { "SubChainAddr": subChainAddr };
@@ -760,6 +873,7 @@ export var getBlockInfo = function (subChainAddr, rpcIp) {
         var subchainInstance = getInstance(subChainAddr);
 
         subchainInstance.getFlushInfo(function (err, flushNumber) {
+          //console.log("flushNumber----------"+ flushNumber);
           blockInfo.flushNumber = flushNumber;  // 下一轮flush剩余区块数
           resolve(blockInfo);
         });
