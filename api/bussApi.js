@@ -10,7 +10,6 @@ import {autoCheckSol} from "./subchainclient.js"
 import {AsyncStorage} from 'react-native';
 import {getInstance} from "./scAccount.js";
 import { promises } from 'fs';
-//import { resolveCname } from 'dns';
 
 
 var topicIndex = config.topicIndex;
@@ -116,64 +115,51 @@ function sleep(d){
 }
 
 // 创建问题    yes
-export var createTopic = function (award, desc, duration, userAddr, pwd, keystore, subChainAddr, rpcIp) {
-  return new Promise((resolve, reject) => {
-    //var privatekey = decrypt(keystore, pwd).privateKey + "";
-    AsyncStorage.getItem(userAddr, (error, privatekey) => {
-      if (error) {
-          console.log("创建问题获取私钥失败------" + error);
-      } else {
-          console.log("创建问题获取私钥成功-----");
-          try{
-            var result = {};
-              var nonce = currentNonce();
-              createTopicSol(userAddr, pwd, award, duration / config.packPerBlockTime, desc, subChainAddr, nonce, privatekey);
+export var createTopic = async function (award, desc, duration, userAddr, pwd, keystore, subChainAddr, rpcIp) {
+  var privatekeyObj = await decrypt(keystore, pwd);
+  var privatekey = privatekeyObj.privateKey + "";
+  var result = {};
+  try{
+      var nonce = currentNonce();
+      createTopicSol(userAddr, pwd, award, duration / config.packPerBlockTime, desc, subChainAddr, nonce, privatekey);
+      console.log("创建问题成功-----");
+      result.topicHash = "";
+      result.isSuccess = 1;
+      result.nonce = nonce;
+    } catch (e) {
+      console.log("创建问题时发生异常-----" + e);
+      result.topicHash = "";
+      result.isSuccess = 0;
+      result.nonce = -1;
+    }
+    return result;
+  // return new Promise((resolve, reject) => {
+  //   //var privatekey = decrypt(keystore, pwd).privateKey + "";
+  //   AsyncStorage.getItem(userAddr, (error, privatekey) => {
+  //     if (error) {
+  //         console.log("创建问题获取私钥失败------" + error);
+  //     } else {
+  //         console.log("创建问题获取私钥成功-----");
+  //         try{
+  //           var result = {};
+  //             var nonce = currentNonce();
+  //             createTopicSol(userAddr, pwd, award, duration / config.packPerBlockTime, desc, subChainAddr, nonce, privatekey);
                       
-              result.topicHash = "";
-              result.isSuccess = 1;
-              result.nonce = nonce;
-              resolve(result);
-              // var postParam1 = {"SubChainAddr": subChainAddr, "Sender": userAddr};
-              // getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam1).then(function(nonce){
-                      
-              //   // 创建问题
-                
-              //   createTopicSol(userAddr, pwd, award, duration / config.packPerBlockTime, desc, subChainAddr, nonce, privatekey);
-                      
-              //   result.topicHash = "";
-              //   result.isSuccess = 1;
-              //   resolve(result);
-        
-              //   // 获取hash
-              //   // var postParam2 = {
-              //   //     "SubChainAddr": subChainAddr,
-              //   //     "Sender": userAddr, 
-              //   //     "nonce": nonce
-              //   // };
-        
-              //   // t = Date.now();
-              //   // sleep((packPerBlockTime + 3) * 1000);
-                
-              //   // getContractInfo(rpcIp, "ScsRPCMethod.GetTxRlt", postParam2).then(function(topicHash){
-              //   //       //console.log(topicHash);
-              //   //       result.topicHash = "";
-              //   //       result.isSuccess = 1;
-              //   //       resolve(result);
-              //   // });
-              
-                
-              // });
-            } catch (e) {
-              console.log("创建问题时发生异常-----" + e);
-              result.topicHash = "";
-              result.isSuccess = 0;
-              result.nonce = -1;
-              resolve(result);
-            }
-      }
-    });
+  //             result.topicHash = "";
+  //             result.isSuccess = 1;
+  //             result.nonce = nonce;
+  //             resolve(result);
+  //           } catch (e) {
+  //             console.log("创建问题时发生异常-----" + e);
+  //             result.topicHash = "";
+  //             result.isSuccess = 0;
+  //             result.nonce = -1;
+  //             resolve(result);
+  //           }
+  //     }
+  //   });
     
-  });
+  // });
   
 	
 }
@@ -322,7 +308,6 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
                       
                   } else {
                     // 代表内容
-                    console.log("---------" + descFlag);
                     var blankIndex = descFlag.substring(2).indexOf('0000');
                         // if (blankIndex > 0) {
                         //   topic.desc = utf8HexToStr(descFlag.substring(2).substring(0, blankIndex)); // 问题内容
@@ -363,69 +348,74 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp) {
 }
 
 // 创建回答   yes
-export var createSubTopic = function (topicHash, desc, userAddr, pwd, keystore, subChainAddr, rpcIp) {
+export var createSubTopic = async function (topicHash, desc, userAddr, pwd, keystore, subChainAddr, rpcIp) {
 
   var result = {};
-  return new Promise((resolve, reject) => {
+  var privatekeyObj = await decrypt(keystore, pwd);
+  var privatekey = privatekeyObj.privateKey + "";
+  
+  return checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
+    if (data == 0) {
+      result.subTopicHash = "";
+      result.isSuccess = 2;  // 问题已经过期
+      return result;
+    } 
+
+    try {
+
+      var nonce = currentNonce();
+      createSubTopicSol(userAddr, pwd, desc, subChainAddr, topicHash, nonce, privatekey);
+      console.log("创建回答成功------");
+      result.subTopicHash = "";
+      result.isSuccess = 1;
+      result.nonce = nonce;
+      return result;
+
+    } catch (e) {
+      console.log("创建回答发生异常------" + e);
+      result.subTopicHash = "";
+      result.isSuccess = 0;
+      result.nonce = -1;
+      return result;
+    }
+  
+});
+//   return new Promise((resolve, reject) => {
     
-    checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
-      if (data == 0) {
-        result.subTopicHash = "";
-        result.isSuccess = 2;  // 问题已经过期
-        resolve(result);  
-      } 
+//     checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
+//       if (data == 0) {
+//         result.subTopicHash = "";
+//         result.isSuccess = 2;  // 问题已经过期
+//         resolve(result);  
+//       } 
 
-    //var privatekey = decrypt(keystore, pwd).privateKey + "";
-    AsyncStorage.getItem(userAddr, (error, privatekey) => {
-      if (error) {
-          console.log("创建回答获取私钥失败------" + error);
-      } else {
-          console.log("创建回答获取私钥成功-----");
-          try {
+//     //var privatekey = decrypt(keystore, pwd).privateKey + "";
+//     AsyncStorage.getItem(userAddr, (error, privatekey) => {
+//       if (error) {
+//           console.log("创建回答获取私钥失败------" + error);
+//       } else {
+//           console.log("创建回答获取私钥成功-----");
+//           try {
 
-            var nonce = currentNonce();
-            createSubTopicSol(userAddr, pwd, desc, subChainAddr, topicHash, nonce, privatekey);
-            result.subTopicHash = "";
-            result.isSuccess = 1;
-            result.nonce = nonce;
-            resolve(result);
+//             var nonce = currentNonce();
+//             createSubTopicSol(userAddr, pwd, desc, subChainAddr, topicHash, nonce, privatekey);
+//             result.subTopicHash = "";
+//             result.isSuccess = 1;
+//             result.nonce = nonce;
+//             resolve(result);
       
-            // var postParam1 = {"SubChainAddr": subChainAddr, "Sender": userAddr};
-            // getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam1).then(function(nonce){
-              
-            //     // 创建回答
-            //     createSubTopicSol(userAddr, pwd, desc, subChainAddr, topicHash, nonce, privatekey);
-            //     result.subTopicHash = "";
-            //     result.isSuccess = 1;
-            //     resolve(result);
-            //     // // 获取hash
-            //     // var postParam2 = {
-            //     //     "SubChainAddr": subChainAddr,
-            //     //     "Sender": userAddr, 
-            //     //     "nonce": nonce
-            //     // };
-            //     // t = Date.now();
-            //     // sleep((packPerBlockTime + 2) * 1000);
-            //     // getContractInfo(rpcIp, "ScsRPCMethod.GetTxRlt", postParam2).then(function(subTopicHash){
-            //     //   //console.log("0x" + subTopicHash);
-            //     //   result.subTopicHash = "";
-            //     //   result.isSuccess = 1;
-            //     //   resolve(result);
-            //     // });
-              
-            // });
-          } catch (e) {
-            console.log("创建回答发生异常------" + e);
-            result.subTopicHash = "";
-            result.isSuccess = 0;
-            result.nonce = -1;
-            resolve(result);
-          }
-      }
-    });
+//           } catch (e) {
+//             console.log("创建回答发生异常------" + e);
+//             result.subTopicHash = "";
+//             result.isSuccess = 0;
+//             result.nonce = -1;
+//             resolve(result);
+//           }
+//       }
+//     });
     
-});
-});
+// });
+// });
   
 	
 }
@@ -604,61 +594,73 @@ export var getMicroChainBalance = function (userAddr, pwd, keystore, subChainAdd
 }
 
 // 点赞    yes
-export var approveSubTopic = function (voter, subTopicHash, subChainAddr, pwd, keystore, rpcIp) {
-  return new Promise((resolve) => {
-    var result = {};
-    AsyncStorage.getItem(voter, (error, privatekey) => {
-      if (error) {
-        console.log("点赞获取私钥失败------" + error);
-      } else {
-        console.log("点赞获取私钥成功-----");
-        try {
-          // var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
-          // var postParam = {"SubChainAddr": subChainAddr, "Sender": voter};
-          // return getContractInfo(rpcIp,"ScsRPCMethod.GetNonce", postParam).then(function(nonce){
-          //   voteOnTopic(voter, pwd, subChainAddr, subTopicHash, nonce,privatekey);
-          //   return 1;
-          // });
-          var nonce = currentNonce();
-          voteOnTopic(voter, pwd, subChainAddr, subTopicHash, nonce, privatekey);
-          result.isSuccess = 1;
-          result.nonce = nonce;
+export var approveSubTopic = async function (voter, subTopicHash, subChainAddr, pwd, keystore, rpcIp) {
+
+  var result = {};
+  var privatekeyObj = await decrypt(keystore, pwd);
+  var privatekey = privatekeyObj.privateKey + "";
+  try {
+    var nonce = currentNonce();
+    voteOnTopic(voter, pwd, subChainAddr, subTopicHash, nonce, privatekey);
+    result.isSuccess = 1;
+    result.nonce = nonce;
+    
+  } catch (e) {
+    console.log("点赞报错--------" + e);
+    result.isSuccess = 0;
+    result.nonce = -1;
+  }
+  return result;
+
+  // return new Promise((resolve) => {
+  //   var result = {};
+  //   AsyncStorage.getItem(voter, (error, privatekey) => {
+  //     if (error) {
+  //       console.log("点赞获取私钥失败------" + error);
+  //     } else {
+  //       console.log("点赞获取私钥成功-----");
+  //       try {
+  //         var nonce = currentNonce();
+  //         voteOnTopic(voter, pwd, subChainAddr, subTopicHash, nonce, privatekey);
+  //         result.isSuccess = 1;
+  //         result.nonce = nonce;
           
-        } catch (e) {
-          console.log("点赞报错--------" + e);
-          result.isSuccess = 0;
-          result.nonce = -1;
-        }
-        resolve(result);
-      }
-    });
-  });
+  //       } catch (e) {
+  //         console.log("点赞报错--------" + e);
+  //         result.isSuccess = 0;
+  //         result.nonce = -1;
+  //       }
+  //       resolve(result);
+  //     }
+  //   });
+  // });
   
   
 	
 }
 
 // autoCheck
-export var autoCheck = function (userAddr, pwd, keystore, subChainAddr, rpcIp) {
-  //var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
-	// var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
-	// return getContractInfo(rpcIp,"ScsRPCMethod.GetNonce", postParam).then(function(nonce){
-  //   autoCheckSol(userAddr, pwd, subChainAddr, nonce, privatekey);
-  //   return 1;
-  // });
-  return new Promise((resolve) => {
-    AsyncStorage.getItem(userAddr, (error, privatekey) => {
-      if (error) {
-          console.log("结算获取私钥失败------" + error);
-      } else {
-          console.log("结算获取私钥成功-----");
-          var nonce = currentNonce();
-          autoCheckSol(userAddr, pwd, subChainAddr, nonce, privatekey);
-          resolve(1);
-      }
-    });
+export var autoCheck = async function (userAddr, pwd, keystore, subChainAddr, rpcIp) {
+
+  var privatekeyObj = await decrypt(keystore, pwd);
+  var privatekey = privatekeyObj.privateKey + "";
+
+  var nonce = currentNonce();
+  autoCheckSol(userAddr, pwd, subChainAddr, nonce, privatekey);
+  return 1;
+  // return new Promise((resolve) => {
+  //   AsyncStorage.getItem(userAddr, (error, privatekey) => {
+  //     if (error) {
+  //         console.log("结算获取私钥失败------" + error);
+  //     } else {
+  //         console.log("结算获取私钥成功-----");
+  //         var nonce = currentNonce();
+  //         autoCheckSol(userAddr, pwd, subChainAddr, nonce, privatekey);
+  //         resolve(1);
+  //     }
+  //   });
     
-  });
+  // });
   
 }
 
@@ -822,7 +824,6 @@ export var getCnNames = function (names) {
 export var getBoardList = function () {
   return new Promise ((resolve) => {
     dechatmanagement.getBoardlist(1,function(err, result){
-      console.log(result);
       var boardList = [];
       
       var arr1 = result[0];
@@ -889,7 +890,7 @@ export var getBoardList = function () {
         board.exchangeRate = finalArr[6][i];
         boardList.push(board);
       }
-      
+      console.log(boardList);
       resolve(boardList);
     });
   });   

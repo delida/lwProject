@@ -51,6 +51,7 @@ import scryptsy from 'scrypt.js';
 import uuid from 'uuid';
 import utils from 'web3-utils';
 import helpers from 'web3-core-helpers';
+import scrypt from 'react-native-scrypt';
 
 
 
@@ -305,7 +306,7 @@ var recover = function recover(message, signature, preFixed) {
 };
 
 // Taken from https://github.com/ethereumjs/ethereumjs-wallet
-export var decrypt = function (v3Keystore, password, nonStrict) {
+export var decrypt = async function (v3Keystore, password, nonStrict) {
     /* jshint maxcomplexity: 10 */
 
     if(!_.isString(password)) {
@@ -324,7 +325,11 @@ export var decrypt = function (v3Keystore, password, nonStrict) {
         kdfparams = json.crypto.kdfparams;
 
         // FIXME: support progress reporting callback
-        derivedKey = scryptsy(new Buffer(password), new Buffer(kdfparams.salt, 'hex'), kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+        //derivedKey = scryptsy(new Buffer(password), new Buffer(kdfparams.salt, 'hex'), kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+        var rnsalt = Object.values(new Buffer(kdfparams.salt, 'hex')).filter(v => Number.isInteger(v));
+		derivedKey = await scrypt(password, rnsalt, kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+		derivedKey = arrayify(derivedKey);
+        derivedKey = Buffer.from(derivedKey);
     } else if (json.crypto.kdf === 'pbkdf2') {
         kdfparams = json.crypto.kdfparams;
 
@@ -350,7 +355,7 @@ export var decrypt = function (v3Keystore, password, nonStrict) {
     return privateKeyToAccount(seed);
 };
 
-export var encrypt = function (privateKey, password, options) {
+export var encrypt = async function (privateKey, password, options) {
     /* jshint maxcomplexity: 20 */
     var account = privateKeyToAccount(privateKey);
 
@@ -374,7 +379,13 @@ export var encrypt = function (privateKey, password, options) {
         kdfparams.n = options.n || 8192; // 2048 4096 8192 16384
         kdfparams.r = options.r || 8;
         kdfparams.p = options.p || 1;
-        derivedKey = scryptsy(new Buffer(password), salt, kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+        //derivedKey = scryptsy(new Buffer(password), salt, kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+
+        var rnsalt = Object.values(new Buffer(kdfparams.salt, 'hex')).filter(v => Number.isInteger(v));
+		derivedKey = await scrypt(password, rnsalt, kdfparams.n, kdfparams.r, kdfparams.p, kdfparams.dklen);
+		derivedKey = arrayify(derivedKey);
+        derivedKey = Buffer.from(derivedKey);
+
     } else {
         throw new Error('Unsupported kdf');
     }
@@ -568,4 +579,69 @@ if (typeof localStorage === 'undefined') {
 //		      '2032cd39a31f17dac44447b59729768d94865b5704ad3f92cf7a161e9fcb55ee' } };
 //console.log(decrypt(keystore, "123456"));
 
+function isArrayish(value) {
+    if (!value || parseInt(value.length) != value.length || typeof(value) === 'string') {
+        return false;
+    }
 
+    for (var i = 0; i < value.length; i++) {
+        var v = value[i];
+        if (v < 0 || v >= 256 || parseInt(v) != v) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function addSlice(array) {
+    if (array.slice) { return array; }
+
+    array.slice = function() {
+        var args = Array.prototype.slice.call(arguments);
+        return new Uint8Array(Array.prototype.slice.apply(array, args));
+    }
+
+    return array;
+}
+
+function arrayify(value) {
+    if (value == null) {
+        return false;
+    }
+
+    if (typeof(value) === 'string' && value.substring(0, 2) !== '0x') {
+        value = '0x' + value;
+    }
+
+    if (isHexString(value)) {
+        value = value.substring(2);
+        if (value.length % 2) { value = '0' + value; }
+
+        var result = [];
+        for (var i = 0; i < value.length; i += 2) {
+            result.push(parseInt(value.substr(i, 2), 16));
+        }
+
+        return addSlice(new Uint8Array(result));
+
+    } else if (typeof(value) === 'string') {
+        if (value.match(/^[0-9a-fA-F]*$/)) {
+             return false;
+        }
+        return false;
+    }
+
+    if (isArrayish(value)) {
+        return addSlice(new Uint8Array(value));
+    }
+    return false;
+}
+
+function isHexString(value, length) {
+    if (typeof(value) !== 'string' || !value.match(/^0x[0-9A-Fa-f]*$/)) {
+        return false
+    }
+    if (length && value.length !== 2 + 2 * length) { return false; }
+    return true;
+}

@@ -1,7 +1,7 @@
 import secp256k1 from 'secp256k1';
 import keccak from 'keccak';
 import {_post} from "./HttpFecth"
-//import {encrypt} from "./accounts"
+import {encrypt} from "./accounts"
 import {decrypt} from "./accounts"
 import {testbuyMintToken} from "./scAccount"
 import {testrequestEnterMicrochain} from "./scAccount"
@@ -11,7 +11,7 @@ import {getMicroChainBalance} from "./bussApi"
 import {AsyncStorage} from 'react-native';
 import {sendtx} from './scAccount'
 import {currentNonce} from './bussApi'
-//import crypto from 'crypto-browserify';
+import crypto from 'crypto';
 
 import config from "./lwconfig.json"
 import assert from "assert"
@@ -92,7 +92,7 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
 
 ///////测试提交
 // 创建账户 (scripts环境不可用)
-export function registerUser(pwd) {
+export async function registerUser(pwd) {
 	var registerInfo = {};
 	var privateKey = crypto.randomBytes(32); // new Buffer("93e44cafebdb047d030d2ad5fb78d61d1ac1fdf9b42b7c15dc3586ef2131cb13", 'hex');//
 	//crypto.randomBytes(32);//
@@ -103,9 +103,7 @@ export function registerUser(pwd) {
 	
 	var privateKeyStr = "0x" + privateKey.toString('hex');
 	var addressStr = "0x" + address.toString('hex');
-	console.log(addressStr);
-	var keystore = encrypt(privateKeyStr, pwd);
-	console.log(keystore);
+	var keystore = await encrypt(privateKeyStr, pwd);
 	registerInfo.userAddr = addressStr;
 	registerInfo.keystore = keystore;
 	return registerInfo;
@@ -116,23 +114,20 @@ export function registerUser(pwd) {
 // 1 输入的userAddr是否在移动端存储的所有keystore中，若不存在直接返回钱包地址或者密码错误
 // 2 若存在，传入userAddr, pwd, keystore调用此方法
 // 3 pwd和keystore解析出来私钥，地址，对比地址和输入地址是否一致
-export function loginUser(addr, pwd, keystore) {
+export async function loginUser(addr, pwd, keystore) {
 	try {
-		
 		var keystoreObj = JSON.parse(keystore);
-		var decryptVal = decrypt(keystoreObj, pwd);
+		var decryptVal = await decrypt(keystoreObj, pwd);
 		var address = decryptVal.address + '';
 		var privateKey = decryptVal.privateKey + '';
-		console.log(address.toLowerCase());
-		console.log(addr.toLowerCase());
 		if (address.toLowerCase() == addr.toLowerCase()) {
-			AsyncStorage.setItem(address.toLowerCase(), privateKey, (error) => {
-				if (error) {
-					console.log("设置privateKey缓存失败------" + error);
-				} else {
-					console.log("设置privateKey缓存成功------");
-				}
-			});
+			// AsyncStorage.setItem(address.toLowerCase(), privateKey, (error) => {
+			// 	if (error) {
+			// 		console.log("设置privateKey缓存失败------" + error);
+			// 	} else {
+			// 		console.log("设置privateKey缓存成功------");
+			// 	}
+			// });
 			return 1
 		} else {
 			return 0;  // 登录失败
@@ -174,54 +169,96 @@ export var getBalance = function (userAddr, marketableTokenAddr) {
 
 
 // 充值（moac兑换主链token, 然后充值进子链）
-export var chargeToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, exchangeRate) {
-	return new Promise((resolve, reject) => {
-		//var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
-
-		AsyncStorage.getItem(userAddr, (error, privatekey) => {
-			if (error) {
-				console.log("充值获取私钥失败------" + error);
-			} else {
-				console.log("充值获取私钥成功-----");
-				try {
-					getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
-						console.log("充值兑换前---------" + JSON.stringify(balance1));
-						testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr); // moac兑换主链erc20
-		
-						var interval = setInterval(function(){
-							console.log("wait for buyToken-----");
-							getBalance(userAddr, marketableTokenAddr).then((balance2) => { 
-								if(balance1.erc20Balance != balance2.erc20Balance){   // 每3s执行一次查询是否兑换成功
-									console.log("充值兑换后---------" + JSON.stringify(balance2));
-									console.log("开始子链充值-----");
-									
-									testrequestEnterMicrochain(userAddr, pwd, chain3.toSha(value * exchangeRate, 'mc'),    // 兑换成功则执行子链充值，并跳出interval
-										privatekey, subChainAddr).then((data) => {
-											if (data == "success") {
-												resolve(1);    // 充值流程开始后，返回给前台1
-												clearInterval(interval);
-											} else {
-												resolve(2);   // 充值流程进入失败
-											}
-									});  
-									
-								}
-							});	
-						}, 3000);
-					});
-					
-				} catch (e) {
-					console.log("充值报错--------" + e);
-					reject(0);
-				}
-				
-			}	
-		});
+export var chargeToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, exchangeRate) {
+	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+	var privatekey = privatekeyObj.privateKey + "";
+	try {
+		testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr);
+		return 1;
+	} catch (e) {
+		console.log("充值报错--------" + e);
+		return 0;
+	}
 
 
-		
-	});	
 }
+// export var chargeToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, exchangeRate) {
+// 		var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+// 		var privatekey = privatekeyObj.privateKey + "";
+// 		try {
+// 			getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
+// 				console.log("充值兑换前---------" + JSON.stringify(balance1));
+// 				testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr); // moac兑换主链erc20
+
+// 				var interval = setInterval(function(){
+// 					console.log("wait for buyToken-----");
+// 					getBalance(userAddr, marketableTokenAddr).then((balance2) => { 
+// 						if(balance1.erc20Balance != balance2.erc20Balance){   // 每3s执行一次查询是否兑换成功
+// 							console.log("充值兑换后---------" + JSON.stringify(balance2));
+// 							console.log("开始子链充值-----");
+							
+// 							testrequestEnterMicrochain(userAddr, pwd, chain3.toSha(value * exchangeRate, 'mc'),    // 兑换成功则执行子链充值，并跳出interval
+// 								privatekey, subChainAddr).then((data) => {
+// 									if (data == "success") {
+// 										return 1;    // 充值流程开始后，返回给前台1
+// 										clearInterval(interval);
+// 									} else {
+// 										return 2;   // 充值流程进入失败
+// 									}
+// 							});  
+							
+// 						}
+// 					});	
+// 				}, 3000);
+// 			});
+			
+// 		} catch (e) {
+// 			console.log("充值报错--------" + e);
+// 			return 0;
+// 		}
+// 	// return new Promise((resolve, reject) => {
+// 	// 	AsyncStorage.getItem(userAddr, (error, privatekey) => {
+// 	// 		if (error) {
+// 	// 			console.log("充值获取私钥失败------" + error);
+// 	// 		} else {
+// 	// 			console.log("充值获取私钥成功-----");
+// 	// 			try {
+// 	// 				getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
+// 	// 					console.log("充值兑换前---------" + JSON.stringify(balance1));
+// 	// 					testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr); // moac兑换主链erc20
+		
+// 	// 					var interval = setInterval(function(){
+// 	// 						console.log("wait for buyToken-----");
+// 	// 						getBalance(userAddr, marketableTokenAddr).then((balance2) => { 
+// 	// 							if(balance1.erc20Balance != balance2.erc20Balance){   // 每3s执行一次查询是否兑换成功
+// 	// 								console.log("充值兑换后---------" + JSON.stringify(balance2));
+// 	// 								console.log("开始子链充值-----");
+									
+// 	// 								testrequestEnterMicrochain(userAddr, pwd, chain3.toSha(value * exchangeRate, 'mc'),    // 兑换成功则执行子链充值，并跳出interval
+// 	// 									privatekey, subChainAddr).then((data) => {
+// 	// 										if (data == "success") {
+// 	// 											resolve(1);    // 充值流程开始后，返回给前台1
+// 	// 											clearInterval(interval);
+// 	// 										} else {
+// 	// 											resolve(2);   // 充值流程进入失败
+// 	// 										}
+// 	// 								});  
+									
+// 	// 							}
+// 	// 						});	
+// 	// 					}, 3000);
+// 	// 				});
+					
+// 	// 			} catch (e) {
+// 	// 				console.log("充值报错--------" + e);
+// 	// 				reject(0);
+// 	// 			}
+				
+// 	// 		}	
+// 	// 	});
+		
+// 	// });	
+// }
 
 export var buyToken = function (userAddr, value) {
 	testbuyMintToken(userAddr, pwd, value); 
@@ -229,108 +266,163 @@ export var buyToken = function (userAddr, value) {
 
 
 // 提币
-export var redeemToken = function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp, exchangeRate) {
-	return new Promise((resolve, reject) => {
-		//var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
-
-		AsyncStorage.getItem(userAddr, (error, privatekey) => {
-			if (error) {
-				console.log("提币获取私钥失败------" + error);
-			} else {
-				console.log("提币获取私钥成功-----");
-				try {
-					getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
-						console.log("提币前主链代币---------" + JSON.stringify(balance1));
-					var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
-			  
-					  getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
-						dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr).then((data) => {   // 提币
-							if (data == "success") {
-								// 开始调用定时器
-								redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1);
-								resolve(1);
-								// var interval = setInterval(function () {
-								// 	console.log("wait for redeemToken-----");
-								// 	getBalance(userAddr, marketableTokenAddr).then((balance2) => {    // 查询当前erc20余额
-			
-								// 		if (balance1.erc20Balance != balance2.erc20Balance) {   // 每30s执行一次查询是否兑换成功
-								// 			console.log("提币后主链代币---------" + JSON.stringify(balance2));
-								// 			console.log("提币成功，开始兑换moac-----");
-								// 			testsellMintToken(userAddr, pwd, chain3.toSha(value, 'mc'), privatekey, subChainAddr);  // 提币成功则执行moac兑换，并跳出interval
-								// 			clearInterval(interval);
-								// 			resolve(1);
-								// 		}
-								// 	});
-								// }, 30000);
-							} else {
-								resolve(2); 
-							}
-						});
-		
-					});
-					});
-		
-				} catch (e) {
-					console.log("提币报错--------" + e);
-					resolve(0);
-				}
-			}
+export var redeemToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp, exchangeRate) {
+	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+	var privatekey = privatekeyObj.privateKey + "";
+	try {
+		var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
+		return getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
+			dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr);
+			return 1;
 		});
-	});
+	} catch (e) {
+		console.log("提币报错--------" + e);
+		return 0;
+	}
+
+};
+
+// export var redeemToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp, exchangeRate) {
+// 	return new Promise((resolve, reject) => {
+// 		//var privatekey = decrypt(JSON.parse(keystore), pwd).privateKey + "";
+
+// 		AsyncStorage.getItem(userAddr, (error, privatekey) => {
+// 			if (error) {
+// 				console.log("提币获取私钥失败------" + error);
+// 			} else {
+// 				console.log("提币获取私钥成功-----");
+// 				try {
+// 					getBalance(userAddr, marketableTokenAddr).then((balance1) => {    // 查询当前erc20余额
+// 						console.log("提币前主链代币---------" + JSON.stringify(balance1));
+// 					var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
+			  
+// 					  getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
+// 						dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr).then((data) => {   // 提币
+// 							if (data == "success") {
+// 								// 开始调用定时器
+// 								redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1);
+// 								resolve(1);
+// 								// var interval = setInterval(function () {
+// 								// 	console.log("wait for redeemToken-----");
+// 								// 	getBalance(userAddr, marketableTokenAddr).then((balance2) => {    // 查询当前erc20余额
+			
+// 								// 		if (balance1.erc20Balance != balance2.erc20Balance) {   // 每30s执行一次查询是否兑换成功
+// 								// 			console.log("提币后主链代币---------" + JSON.stringify(balance2));
+// 								// 			console.log("提币成功，开始兑换moac-----");
+// 								// 			testsellMintToken(userAddr, pwd, chain3.toSha(value, 'mc'), privatekey, subChainAddr);  // 提币成功则执行moac兑换，并跳出interval
+// 								// 			clearInterval(interval);
+// 								// 			resolve(1);
+// 								// 		}
+// 								// 	});
+// 								// }, 30000);
+// 							} else {
+// 								resolve(2); 
+// 							}
+// 						});
+		
+// 					});
+// 					});
+		
+// 				} catch (e) {
+// 					console.log("提币报错--------" + e);
+// 					resolve(0);
+// 				}
+// 			}
+// 		});
+// 	});
 	
-}
+// }
 
 // moac转账
-export var transferMoac = function (from, to, amount, pwd, keystore) {
-	return new Promise((resolve) => {
-		//var privatekey = decrypt(keystore, pwd).privateKey + "";
-		AsyncStorage.getItem(from, (error, privatekey) => {
-			sendtx(from, to, amount, "", privatekey).then((data) => {
-				if (data == "success") {
-					resolve(1);
-				} else {
-					resolve(0);
-				}
-			});
-		});
-		
+export var transferMoac = async function (from, to, amount, pwd, keystore) {
+
+	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+	var privatekey = privatekeyObj.privateKey + "";
+	return sendtx(from, to, amount, "", privatekey).then((data) => {
+		if (data == "success") {
+			console.log("moac转账成功------");
+			return 1;
+		} else {
+			return 0;
+		}
 	});
+	// return new Promise((resolve) => {
+	// 	AsyncStorage.getItem(from, (error, privatekey) => {
+	// 		sendtx(from, to, amount, "", privatekey).then((data) => {
+	// 			if (data == "success") {
+	// 				resolve(1);
+	// 			} else {
+	// 				resolve(0);
+	// 			}
+	// 		});
+	// 	});
+		
+	// });
 }	
 
 
 // coin转账
-export var transferCoin = function (from, to, amount, subChainAddr, pwd, keystore) {
-	return new Promise(function(resolve, reject){
-		//var privatekey = decrypt(keystore, pwd).privateKey + "";
-		AsyncStorage.getItem(from, (error, privatekey) => {
-			chain3.version.getNetwork(function (err, version) {
-				var rawTx = {
-					nonce: chain3.intToHex(currentNonce()),
-					from: from,
-					gas: '0x0',
-					gasLimit: '0x0',//chain3.intToHex(0),
-					gasPrice: '0x0',//chain3.intToHex(0),
-					to: subChainAddr, 
-					value: chain3.toHex(chain3.toSha(amount, 'mc')),
-					data: to,  
-					shardingFlag: '0x2',
-					chainId: chain3.intToHex(version),
-					via: config.via
-				}
-				signedTx = chain3.signTransaction(rawTx, privatekey)
-				chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
-					if (!err) {
-						resolve(1);
-		
-					} else {
-						console.log(err);
-						resolve(0);
-					}
-				});
-			});
+export var transferCoin = async function (from, to, amount, subChainAddr, pwd, keystore) {
+
+	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+	var privatekey = privatekeyObj.privateKey + "";
+
+	chain3.version.getNetwork(function (err, version) {
+		var rawTx = {
+			nonce: chain3.intToHex(currentNonce()),
+			from: from,
+			gas: '0x0',
+			gasLimit: '0x0',//chain3.intToHex(0),
+			gasPrice: '0x0',//chain3.intToHex(0),
+			to: subChainAddr, 
+			value: chain3.toHex(chain3.toSha(amount, 'mc')),
+			data: to,  
+			shardingFlag: '0x2',
+			chainId: chain3.intToHex(version),
+			via: config.via
+		}
+		signedTx = chain3.signTransaction(rawTx, privatekey)
+		chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
+			if (!err) {
+				console.log("coin转账成功-----");
+
+			} else {
+				console.log("coin转账失败-----" + err);
+			}
 		});
+	});
+	return 1;
+	// return new Promise(function(resolve, reject){
+	// 	//var privatekey = decrypt(keystore, pwd).privateKey + "";
+	// 	AsyncStorage.getItem(from, (error, privatekey) => {
+	// 		chain3.version.getNetwork(function (err, version) {
+	// 			var rawTx = {
+	// 				nonce: chain3.intToHex(currentNonce()),
+	// 				from: from,
+	// 				gas: '0x0',
+	// 				gasLimit: '0x0',//chain3.intToHex(0),
+	// 				gasPrice: '0x0',//chain3.intToHex(0),
+	// 				to: subChainAddr, 
+	// 				value: chain3.toHex(chain3.toSha(amount, 'mc')),
+	// 				data: to,  
+	// 				shardingFlag: '0x2',
+	// 				chainId: chain3.intToHex(version),
+	// 				via: config.via
+	// 			}
+	// 			signedTx = chain3.signTransaction(rawTx, privatekey)
+	// 			chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
+	// 				if (!err) {
+	// 					resolve(1);
 		
-	});	
+	// 				} else {
+	// 					console.log(err);
+	// 					resolve(0);
+	// 				}
+	// 			});
+	// 		});
+	// 	});
+		
+	// });	
 }
 
 // 充值提币历史（充值包括进行中，已完成，   提币包括进行中，已完成。   时间倒叙）

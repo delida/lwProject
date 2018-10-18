@@ -120,7 +120,7 @@ export default class App extends React.Component {
 
     // 版块管理  yes
     // getBoardList().then((data) => {
-    //   console.log(data);
+    //  console.log(data);
     // });
 
     // 我的链问列表    yes
@@ -130,10 +130,14 @@ export default class App extends React.Component {
     // });
 
     // 创建账户(scripts环境报错)   
-    //console.log(registerUser("123456"));
+    // registerUser("123456").then((data) => {
+    //   console.log(data);
+    // });
 
     // 登录账户     yes
-    //console.log(loginUser(config.userAddr2, config.pwd, keystore_myTest));
+    // loginUser(config.userAddr2, config.pwd, keystore_myTest).then((data) => {
+    //   console.log("---------" + data);
+    // });
 
     // 获取moac和erc20余额     yes
     // getBalance(config.userAddr2, config.marketableTokenAddr).then((data) => {
@@ -142,13 +146,13 @@ export default class App extends React.Component {
     // });
 
     // 充值   yes
-    // chargeToken(config.userAddr2, 20, config.marketableTokenAddr, 
+    // chargeToken(config.userAddr2, 30, config.marketableTokenAddr, 
     //   config.pwd, keystore_myTest, config.subChainAddr, 10).then((data) => {
     //      console.log(data);
     // })
 
     // 提币    yes
-    // redeemToken(config.userAddr1, 10, config.marketableTokenAddr, config.pwd, keystore_youTest,config.subChainAddr, config.rpcIp).then((data) => {
+    // redeemToken(config.userAddr2, 100, config.marketableTokenAddr, config.pwd, keystore_myTest,config.subChainAddr, config.rpcIp).then((data) => {
     //  console.log(data);
     // })
 
@@ -156,7 +160,7 @@ export default class App extends React.Component {
     // 创建问题
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   createTopic(1, "测试第二个问题?", 500, 
+    //   createTopic(1, "测试decrypt?", 500, 
     //   config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
     //     console.log(data);
     //   })
@@ -166,22 +170,22 @@ export default class App extends React.Component {
     //  getTopicList(0,0, config.subChainAddr,
     //  config.rpcIp).then((data) => {
     //   //this.setState({r:data});
-    //  // console.log(data);
+    // console.log(data);
     //  });
 
     // 创建回答
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   createSubTopic("0xbaa3d56a0d6b56d02deca97164c7297eb6259d639330dcba3a6625014533661b", 
-    //     "第一个回答", config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
-    //     console.log(data);
+    //   createSubTopic("0x56add6644667d7f1eeb06f38cec1710397d2d3ea321c224081b2e137ff679ba6", 
+    //     "第二个回答", config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
+    //     console.log("-----------" + data);
     //   });
 
     // });
 
 
     // 回答列表(暂未做分页)    yes   0x87745f3b2db17acc69f6c9fe7e531f95a974d3bd4729ccbf18e0a4a658373619
-    // getSubTopicList("0x6df12fe71d0d55ccf5ade9c6a5721eea82a848a9c9e4f6af50c5ad90e3896ca4",
+    // getSubTopicList("0x56add6644667d7f1eeb06f38cec1710397d2d3ea321c224081b2e137ff679ba6",
     //      0,0, config.subChainAddr,config.rpcIp, 2).then((data) => {
     //        console.log(data);
     // });
@@ -189,9 +193,11 @@ export default class App extends React.Component {
     // 点赞
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //     console.log(approveSubTopic(config.userAddr2, 
-    //       "0x6a91fa3205136af284419dc1d2063f7bd77df15bf22fd38d1f52d007fb4ade7a", config.subChainAddr,
-    //    config.pwd, keystore_myTest, config.rpcIp));
+    //   approveSubTopic(config.userAddr2, 
+    //       "0xa30dc2806334dad615ad54c8b189714a079ac392a1e59cac9027a5cd3b1b9e4d", config.subChainAddr,
+    //    config.pwd, keystore_myTest, config.rpcIp).then((data) => {
+    //      console.log(data);
+    //    });
   
     // });
 
@@ -208,6 +214,7 @@ export default class App extends React.Component {
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
     // autoCheck(config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
+    //   console.log(data);
     // });
 
     // });
@@ -215,9 +222,9 @@ export default class App extends React.Component {
     //moac转账
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   transferMoac(config.userAddr2, "0x0647deb57cce085f5eeb1453592541e7954b06a2", 1,
+    //   transferMoac(config.userAddr2, config.userAddr1, 10,
     //     config.pwd, keystore_myTest).then((data) => {
-    //       console.log(data);
+    //       console.log("--------" + data);
     //     })
 
     // });
@@ -225,9 +232,9 @@ export default class App extends React.Component {
     //coin转账
     // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
 
-    //   transferCoin(config.userAddr2, "0x0647deb57cce085f5eeb1453592541e7954b06a2", 1, config.subChainAddr, 
+    //   transferCoin(config.userAddr2, config.userAddr1, 1, config.subChainAddr, 
     //     config.pwd, keystore_myTest).then((data) => {
-    //       console.log(data);
+    //       console.log("----------" + data);
     //     })
 
     // });
