@@ -64,9 +64,6 @@ const Hexstring2btye = (str)=> {
 export var getContractInfo = function(rpcIp, methodName, postParam) {
   
     var data = {"jsonrpc": "2.0", "id": 0, "method": methodName, "params": postParam};
-  //   data = JSON.stringify(data);
-  // console.log(rpcIp);
-  // console.log(data)
     return new Promise(function(resolve, reject){
         _post(rpcIp, data).then((datas) => {
             //console.log("datas---------" + JSON.stringify(datas))
@@ -362,14 +359,16 @@ export var transferMoac = async function (from, to, amount, pwd, keystore) {
 
 
 // coin转账
-export var transferCoin = async function (from, to, amount, subChainAddr, pwd, keystore) {
+export var transferCoin = async function (from, to, amount, subChainAddr, pwd, keystore, rpcIp) {
 
 	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
 	var privatekey = privatekeyObj.privateKey + "";
 
+	var nonce = await currentNonce(subChainAddr, from, rpcIp);
+	//currentNonce(subChainAddr, from, rpcIp).then((currentNonce) => {
 	chain3.version.getNetwork(function (err, version) {
 		var rawTx = {
-			nonce: chain3.intToHex(currentNonce()),
+			nonce: chain3.intToHex(nonce),
 			from: from,
 			gas: '0x0',
 			gasLimit: '0x0',//chain3.intToHex(0),
@@ -391,6 +390,8 @@ export var transferCoin = async function (from, to, amount, subChainAddr, pwd, k
 			}
 		});
 	});
+	//});
+	
 	return 1;
 	// return new Promise(function(resolve, reject){
 	// 	//var privatekey = decrypt(keystore, pwd).privateKey + "";
