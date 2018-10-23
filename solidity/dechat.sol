@@ -202,8 +202,8 @@ contract DeChat is DappBase{
 		return key;
 	}
 	
-	function creatSubTopic(bytes32 parenthash, string desc) public payable returns (bytes32) {
-		require(msg.value >= answerBond );
+	function creatSubTopic(bytes32 parenthash, string desc) public returns (bytes32) {
+		//require(msg.value >= answerBond );
 		bytes32 hash = sha3(block.number, msg.sender, desc);
 		//save subtopic
 		subTopics[hash].hash = hash;
