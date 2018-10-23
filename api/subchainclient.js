@@ -68,7 +68,7 @@ export function createSubTopicSol(userAddr, pwd, desc, subchainaddr,topHash, non
 {
 	var data=deChatInstance.creatSubTopic.getData(topHash, desc)
 	
-	sendshardingflagtx(userAddr, pwd,subchainaddr, "0.1",data,nonce, privatekey)
+	sendshardingflagtx(userAddr, pwd,subchainaddr, "0",data,nonce, privatekey)
 }
 
 export function voteOnTopic(vote, pwd, subchainaddr,subHash, nonce, privatekey)
