@@ -253,24 +253,38 @@ contract DeChat is DappBase{
 
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
+		uint rewardback = 0;
+		uint z = 100;
 		for( uint i=lastProcBlk; i<block.number; i++ ) {
 			for( uint j=0; j<expinfo[i].length; j++ ) {
 				bytes32 phash = expinfo[i][j];
 				if(phash == "" || topics[phash].closed) {
 				continue;
 				}
-				
+
+                rewardback = topics[phash].award;
+
 				//best topic
 				bytes32 besthash = topics[phash].bestHash;
 				if(subTopics[besthash].owner != address(0) ){
 					uint reward1 = topics[phash].award * firstPrize /100;
 					subTopics[besthash].owner.transfer(reward1);
 					subTopics[besthash].reward = reward1;
+
+                    rewardback = rewardback - reward1;
 				}
-				
-				//award each voter for besthash
-				for( uint k=0; k<subTopics[besthash].voters.length; k++ ) {
-					subTopics[besthash].voters[k].transfer( topics[phash].award * votePrize /100/subTopics[besthash].voters.length );
+
+				//award top 100 voter for besthash
+		                z = subTopics[besthash].voters.length;
+		                if (z > 100) {
+		                    z = 100;
+		                }
+
+				for( uint k=0; k<z; k++ ) {
+                    uint rewardv = topics[phash].award * votePrize /100/subTopics[besthash].voters.length;
+					subTopics[besthash].voters[k].transfer(rewardv);
+
+                    rewardback = rewardback - rewardv;
 				}
 				
 				//second best topic
@@ -279,18 +293,29 @@ contract DeChat is DappBase{
 					uint reward2 = topics[phash].award * secondPrize /100;
 					subTopics[secondBesthash].owner.transfer(reward2);
 					subTopics[secondBesthash].reward = reward2;
+
+                    rewardback = rewardback - reward2;
 				}
-				
+
 				// award moderator
 				if(moderator != address(0) ){
-					moderator.transfer( topics[phash].award * modPrize /100 );
+				    uint t = topics[phash].award * modPrize /100;
+					moderator.transfer(t);
+
+                    rewardback = rewardback - t;
 				}
-				
+
 				// award developer
 				if(developer != address(0) ){
 					developer.transfer( topics[phash].award * devPrize /100 );
+
+                    rewardback = rewardback -  topics[phash].award * devPrize /100;
 				}
-				
+
+		        // pay back to owner if remain
+		        topics[phash].owner.transfer(rewardback);
+
+
 				//mark as closed
 				topics[phash].closed = true;
 				updateMyTopic(topics[phash]);
