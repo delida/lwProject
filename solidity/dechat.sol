@@ -281,7 +281,7 @@ contract DeChat is DappBase{
 		                }
 
 				for( uint k=0; k<z; k++ ) {
-                    uint rewardv = topics[phash].award * votePrize /100/subTopics[besthash].voters.length;
+                    uint rewardv = topics[phash].award * votePrize /100/z;
 					subTopics[besthash].voters[k].transfer(rewardv);
 
                     rewardback = rewardback - rewardv;
