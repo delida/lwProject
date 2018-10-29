@@ -131,6 +131,9 @@ contract DeChat is DappBase{
 	address internal moderator;
 	
 	mapping(address => topic[]) public myTopics; // index = 0x18
+	
+	uint private maxVotes = 100;// autoCheck max handle votes of one subTopic
+	uint private maxTopics = 100;// autoCheck max handle Topics of one block
 
 	function DeChat(address mod, address dev) public payable {
 		lastProcBlk = block.number;
@@ -254,9 +257,9 @@ contract DeChat is DappBase{
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
 		uint rewardback = 0;
-		uint z = 100;
-		for( uint i=lastProcBlk; i<block.number; i++ ) {
-			for( uint j=0; j<expinfo[i].length; j++ ) {
+		uint i=0;
+		for(i=lastProcBlk; i<block.number; i++ ) {
+			for( uint j=0; j<expinfo[i].length && j<maxTopics; j++ ) {
 				bytes32 phash = expinfo[i][j];
 				if(phash == "" || topics[phash].closed) {
 				continue;
@@ -275,13 +278,13 @@ contract DeChat is DappBase{
 				}
 
 				//award top 100 voter for besthash
-		                z = subTopics[besthash].voters.length;
-		                if (z > 100) {
-		                    z = 100;
+		                maxVotes = subTopics[besthash].voters.length;
+		                if (maxVotes > 100) {
+		                    maxVotes = 100;
 		                }
 
-				for( uint k=0; k<z; k++ ) {
-                    uint rewardv = topics[phash].award * votePrize /100/z;
+				for( uint k=0; k<maxVotes; k++ ) {
+                    uint rewardv = topics[phash].award * votePrize /100/maxVotes;
 					subTopics[besthash].voters[k].transfer(rewardv);
 
                     rewardback = rewardback - rewardv;
@@ -313,8 +316,9 @@ contract DeChat is DappBase{
 				}
 
 		        // pay back to owner if remain
-		        topics[phash].owner.transfer(rewardback);
-
+		        if (rewardback > 0) {
+		            topics[phash].owner.transfer(rewardback);
+                }
 
 				//mark as closed
 				topics[phash].closed = true;
@@ -327,6 +331,9 @@ contract DeChat is DappBase{
 				newTopicList.length --;
 				delete newTopicIndex[phash];
 			}
+		}
+		if (i>0) {
+			lastProcBlk = i-1;
 		}
 	}
 }
