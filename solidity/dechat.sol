@@ -142,6 +142,10 @@ contract DeChat is DappBase{
 		developer = dev;
 	}	
 
+    function getDechatInfo() public returns (address) {
+        return moderator;
+    }
+
 	function createTopic(uint award, uint expblk, string desc) public payable returns (bytes32) {
 		require(msg.value >= award );
 		bytes32 hash = sha3(block.number, msg.sender, desc);
