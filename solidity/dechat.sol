@@ -239,6 +239,46 @@ contract DeChat is DappBase{
 		
 		return myTopics[addr];
 	}
+
+	function getTopicList(uint pageNum, uint pageSize) public view returns (topic[]) {
+		uint start = pageNum*pageSize;
+		uint end = (pageNum+1)*pageSize;
+		uint count = newTopicList.length;
+		if (start>=count) {
+			start = 0;
+			end =0;
+		} else if (end>count) {
+			end = count;
+		}
+
+		topic[] memory memTopics = new topic[](end-start);		
+		for (uint i=start; i<end; i++) {
+			memTopics[i-start] = topics[newTopicList[i]];
+		}
+
+		return memTopics;
+	}
+	
+	function getSubTopicList(bytes32 hash, uint pageNum, uint pageSize) public view returns (subTopic[]) {
+		require(hash != bytes32(0));
+		
+		uint start = pageNum*pageSize;
+		uint end = (pageNum+1)*pageSize;
+		uint count = topicAns[hash].length;
+		if (start>=count) {
+			start = 0;
+			end =0;
+		} else if (end>count) {
+			end = count;
+		}
+
+		subTopic[] memory memSubTopics = new subTopic[](end-start);
+		for (uint i=start; i<count; i++) {
+			memSubTopics[i-start] = subTopics[topicAns[hash][i]];
+		}
+
+		return memSubTopics;
+	}
 	
 	function setTopicStatus(bytes32 hash, uint status)  public returns(bytes32) {
 		require(owner == msg.sender || moderator ==  msg.sender);
