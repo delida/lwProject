@@ -323,8 +323,8 @@ contract DeChat is DappBase{
 
 				//award top 100 voter for besthash
 		                maxVotes = subTopics[besthash].voters.length;
-		                if (maxVotes > 100) {
-		                    maxVotes = 100;
+		                if (maxVotes > voteAwardCount) {
+		                    maxVotes = voteAwardCount;
 		                }
 
 				for( uint k=0; k<maxVotes; k++ ) {
