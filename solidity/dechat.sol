@@ -273,7 +273,7 @@ contract DeChat is DappBase{
 		}
 
 		subTopic[] memory memSubTopics = new subTopic[](end-start);
-		for (uint i=start; i<count; i++) {
+		for (uint i=start; i<end; i++) {
 			memSubTopics[i-start] = subTopics[topicAns[hash][i]];
 		}
 
