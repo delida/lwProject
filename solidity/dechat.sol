@@ -131,6 +131,9 @@ contract DeChat is DappBase{
 	address internal moderator;
 	
 	mapping(address => topic[]) public myTopics; // index = 0x18
+	
+	uint private maxVotes = 100;// autoCheck max handle votes of one subTopic
+	uint private maxTopics = 100;// autoCheck max handle Topics of one block
 
 	function DeChat(address mod, address dev) public payable {
 		lastProcBlk = block.number;
@@ -138,6 +141,10 @@ contract DeChat is DappBase{
 		moderator = mod;
 		developer = dev;
 	}	
+
+    function getDechatInfo() public returns (address) {
+        return moderator;
+    }
 
 	function createTopic(uint award, uint expblk, string desc) public payable returns (bytes32) {
 		require(msg.value >= award );
@@ -232,6 +239,46 @@ contract DeChat is DappBase{
 		
 		return myTopics[addr];
 	}
+
+	function getTopicList(uint pageNum, uint pageSize) public view returns (topic[]) {
+		uint start = pageNum*pageSize;
+		uint end = (pageNum+1)*pageSize;
+		uint count = newTopicList.length;
+		if (start>=count) {
+			start = 0;
+			end =0;
+		} else if (end>count) {
+			end = count;
+		}
+
+		topic[] memory memTopics = new topic[](end-start);		
+		for (uint i=start; i<end; i++) {
+			memTopics[i-start] = topics[newTopicList[i]];
+		}
+
+		return memTopics;
+	}
+	
+	function getSubTopicList(bytes32 hash, uint pageNum, uint pageSize) public view returns (subTopic[]) {
+		require(hash != bytes32(0));
+		
+		uint start = pageNum*pageSize;
+		uint end = (pageNum+1)*pageSize;
+		uint count = topicAns[hash].length;
+		if (start>=count) {
+			start = 0;
+			end =0;
+		} else if (end>count) {
+			end = count;
+		}
+
+		subTopic[] memory memSubTopics = new subTopic[](end-start);
+		for (uint i=start; i<end; i++) {
+			memSubTopics[i-start] = subTopics[topicAns[hash][i]];
+		}
+
+		return memSubTopics;
+	}
 	
 	function setTopicStatus(bytes32 hash, uint status)  public returns(bytes32) {
 		require(owner == msg.sender || moderator ==  msg.sender);
@@ -253,24 +300,38 @@ contract DeChat is DappBase{
 
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
-		for( uint i=lastProcBlk; i<block.number; i++ ) {
-			for( uint j=0; j<expinfo[i].length; j++ ) {
+		uint rewardback = 0;
+		uint i=0;
+		for(i=lastProcBlk; i<block.number; i++ ) {
+			for( uint j=0; j<expinfo[i].length && j<maxTopics; j++ ) {
 				bytes32 phash = expinfo[i][j];
 				if(phash == "" || topics[phash].closed) {
 				continue;
 				}
-				
+
+                rewardback = topics[phash].award;
+
 				//best topic
 				bytes32 besthash = topics[phash].bestHash;
 				if(subTopics[besthash].owner != address(0) ){
 					uint reward1 = topics[phash].award * firstPrize /100;
 					subTopics[besthash].owner.transfer(reward1);
 					subTopics[besthash].reward = reward1;
+
+                    rewardback = rewardback - reward1;
 				}
-				
-				//award each voter for besthash
-				for( uint k=0; k<subTopics[besthash].voters.length; k++ ) {
-					subTopics[besthash].voters[k].transfer( topics[phash].award * votePrize /100/subTopics[besthash].voters.length );
+
+				//award top 100 voter for besthash
+		                maxVotes = subTopics[besthash].voters.length;
+		                if (maxVotes > voteAwardCount) {
+		                    maxVotes = voteAwardCount;
+		                }
+
+				for( uint k=0; k<maxVotes; k++ ) {
+                    uint rewardv = topics[phash].award * votePrize /100/maxVotes;
+					subTopics[besthash].voters[k].transfer(rewardv);
+
+                    rewardback = rewardback - rewardv;
 				}
 				
 				//second best topic
@@ -279,18 +340,30 @@ contract DeChat is DappBase{
 					uint reward2 = topics[phash].award * secondPrize /100;
 					subTopics[secondBesthash].owner.transfer(reward2);
 					subTopics[secondBesthash].reward = reward2;
+
+                    rewardback = rewardback - reward2;
 				}
-				
+
 				// award moderator
 				if(moderator != address(0) ){
-					moderator.transfer( topics[phash].award * modPrize /100 );
+				    uint t = topics[phash].award * modPrize /100;
+					moderator.transfer(t);
+
+                    rewardback = rewardback - t;
 				}
-				
+
 				// award developer
 				if(developer != address(0) ){
 					developer.transfer( topics[phash].award * devPrize /100 );
+
+                    rewardback = rewardback -  topics[phash].award * devPrize /100;
 				}
-				
+
+		        // pay back to owner if remain
+		        if (rewardback > 0) {
+		            topics[phash].owner.transfer(rewardback);
+                }
+
 				//mark as closed
 				topics[phash].closed = true;
 				updateMyTopic(topics[phash]);
@@ -302,6 +375,9 @@ contract DeChat is DappBase{
 				newTopicList.length --;
 				delete newTopicIndex[phash];
 			}
+		}
+		if (i>0) {
+			lastProcBlk = i-1;
 		}
 	}
 }
