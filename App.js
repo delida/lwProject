@@ -28,6 +28,10 @@ import {getHttpInfo} from './api/bussApi';
 import {getCnNames} from './api/bussApi';
 import {testbuyMintToken} from './api/scAccount';
 import {myHistoryList} from './api/accountApi';
+import {getChain3} from './api/accountApi';
+import {commonSetVnode} from './api/accountApi';
+import {commonSetRpcIp} from './api/accountApi';
+import {commonSetRpcAndVnode} from './api/accountApi';
 
 // import youdao from 'youdao-node';
 import config from "./api/lwconfig.json"
@@ -38,6 +42,7 @@ var keystore_login = "{\"version\":3,\"id\":\"ecd695b5-98cd-408b-a246-c0e63f4c0d
 var keystore_myTest = "{\"version\":3,\"id\":\"91b62e72-d454-46f9-8382-686864309b1a\",\"address\":\"b6d00a2265668fb0efaaba89ea24e816bd537ef7\",\"crypto\":{\"ciphertext\":\"3366505d6543f3f87bcf75d106562d550943ae8b4e7222e69214b7aafb61dea0\",\"cipherparams\":{\"iv\":\"ad34a9d430990f1beda8fea48607f847\"},\"cipher\":\"aes-128-ctr\",\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"salt\":\"708b606d25787a330e7ecadfe5d8f7e02faee125a7012c0c0eb6480469ca4167\",\"n\":8192,\"r\":8,\"p\":1},\"mac\":\"fc82e0691007b018cf48e689b66e8f19d122ad83b95a763921e0bde0076c6d62\"}}";
 var keystore_youTest = "{\"version\":3,\"id\":\"7ce8fb55-264b-4ba0-89cd-97840ca7bc4f\",\"address\":\"e7e52b94e9a82351302260ec39a300e9f00aee4c\",\"crypto\":{\"ciphertext\":\"6b8c6d2aa87cc3fff5cae9a984bf89f8b1b0307a6c796b65616371de7c1e558c\",\"cipherparams\":{\"iv\":\"f664b90fae01d8984072e65bd7e0b6e7\"},\"cipher\":\"aes-128-ctr\",\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"salt\":\"d3804059e4d6b809f0a9e1b9a1562153d544f2586580374a9120f061695b6c33\",\"n\":8192,\"r\":8,\"p\":1},\"mac\":\"e426a88e8bf9e47b8ad2eee53d835d99b510c159972c4afd8dc43d8be481b39a\"}}";
 
+var keystore_hiTest = "{\"version\":3,\"id\":\"40b0d7b0-f4f5-47e7-ba4e-00925d503b03\",\"address\":\"b2beea98dec18c537007f86b3582255516a6fa72\",\"crypto\":{\"ciphertext\":\"f859c2aa2130c2172204dd27293f2e9d3878212d071287a87722e65af459aac2\",\"cipherparams\":{\"iv\":\"c198072934bd52c7e6ea09f56f669b8a\"},\"cipher\":\"aes-128-ctr\",\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"salt\":\"b288e989813ef93c2e067cd26f45f748713f737cccc5c0fa760bf0cf8686f937\",\"n\":8192,\"r\":8,\"p\":1},\"mac\":\"d5ff3e0a231c1369e3a0fbfd4d5631a02b7143fabeee52d04f33d1b6241e8990\"}}";
 var keystore_test1 = "{\"userAddr\":\"0x8bf33c7bceee4f04368e6f076d87dc78545b1564\",\"keystore\":{\"version\":3,\"id\":\"1842b7ca-ecba-4f26-a900-e0e425e06641\",\"address\":\"8bf33c7bceee4f04368e6f076d87dc78545b1564\",\"crypto\":{\"ciphertext\":\"475835968f3f3ddfb31e550a053163f2c2a7056855c64e4c3194bddf25a0c92f\",\"cipherparams\":{\"iv\":\"8195c3ad97bc9d7d210e9dc4282f6abf\"},\"cipher\":\"aes-128-ctr\",\"kdf\":\"scrypt\",\"kdfparams\":{\"dklen\":32,\"salt\":\"3d9b3f776b1599daafb230a1209d1677de3442d5c2e0ca1b27d417df791de514\",\"n\":8192,\"r\":8,\"p\":1},\"mac\":\"c7058dca33fcdc0671170a4ad810fa8d752ff4508860c990babc9fa90a8e2472\"}}}";
 
   var pwd = "123456";
@@ -105,6 +110,106 @@ export default class App extends React.Component {
 
    renderTest() {
 
+    var t = Date.now();  
+    function sleep(d){  
+        while(Date.now() - t <= d);  
+    }
+
+      
+    commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+            setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
+
+              // 版块列表
+              // getBoardList().then((data) => {
+              //  console.log(data);
+              // });
+
+              // 充值提币记录
+              // myHistoryList(0, 0, config.userAddr2, config.subChainAddr, "").then ((data) => {
+              //   console.log(data);
+              // });
+
+              // 提问录
+              // myTopicList(config.userAddr2, config.subChainAddr, "123456", keystore_myTest, 
+              //   "", config.deployLwSolAdmin).then((data) => {
+              //   console.log(data);
+              // });
+
+              // 充值
+              // chargeToken(config.userAddr2, 10, config.marketableTokenAddr, 
+              //   config.pwd, keystore_myTest, config.subChainAddr, 10).then((data) => {
+              //     console.log(data);
+              // })
+
+              // 提币
+              // redeemToken(config.userAddr2, 900, config.marketableTokenAddr, config.pwd, keystore_myTest,config.subChainAddr, "").then((data) => {
+              //  console.log(data);
+              // })
+
+              // 转账coin
+                // transferCoin(config.userAddr2, config.userAddr1, 8, config.subChainAddr, 
+                //   config.pwd, keystore_myTest, config.rpcIp).then((data) => {
+                //     console.log("----------" + data);
+                //   })
+
+              // 余额
+              // getBalance(config.userAddr2, config.marketableTokenAddr).then((data) => {
+              //   console.log(data);
+              //   //this.setState({r:data.erc20Balance});
+              // });
+
+              // 创建问题
+              // createTopic(1, "第三个问题？", 500, 
+              // config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, "").then((data) => {
+              //   console.log(data);
+              // })
+
+              // 获取问题列表
+              // getTopicList(0,0, config.subChainAddr, "", "0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0").then((data) => {
+              //   console.log(data);
+              // });
+
+              // 创建回答
+                // createSubTopic("0x703ddafc9a542c3e3967e97192ab0e76f0d61c0a19fd4523fade04c93ed77a15", 
+                //   "nonce回答", config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, "").then((data) => {
+                //   console.log("-----------" + data);
+                // });
+
+                // 获取回答列表
+              // getSubTopicList("0x703ddafc9a542c3e3967e97192ab0e76f0d61c0a19fd4523fade04c93ed77a15",
+              //        0,0, config.subChainAddr,"", 1, config.deployLwSolAdmin).then((data) => {
+              //          console.log(data);
+              //   });
+
+                //  approveSubTopic(config.userAddr2, 
+                //       "0x01dc09f4f996f6d44fd4655d76dc4884fc423b22a09f4860b22707c08d907368", config.subChainAddr,
+                //    config.pwd, keystore_myTest, "").then((data) => {
+                //      console.log(data);
+                //    });
+
+                // getBlockInfo(config.subChainAddr, config.rpcIp).then ((data) => {
+                //   console.log(data);
+                // });
+
+
+
+            });
+
+        
+    
+    });
+
+    
+
+    // var chain111 = new Chain3(new Chain3.providers.HttpProvider("http://47.106.69.61:8545"));
+    // chain111.mc.getBlockNumber(function (err, num) {
+    //   console.log(num);
+    // });
+
+    // getHttpInfo("people").then((data) => {
+    //   console.log(data);
+    // })
+
     // myHistoryList(0, 0, config.userAddr2, config.subChainAddr, config.rpcIp).then ((data) => {
     //   console.log(data);
     // });
@@ -128,7 +233,7 @@ export default class App extends React.Component {
     // });
 
     // 我的链问列表    yes
-    // myTopicList(config.userAddr2, config.subChainAddr, config.pwd, keystore_myTest, 
+    // myTopicList("0xb6d00a2265668fb0efaaba89ea24e816bd537ef7", config.subChainAddr, "123456", keystore_hiTest, 
     //   config.rpcIp, config.deployLwSolAdmin).then((data) => {
     //   console.log(data);
     // });
@@ -162,13 +267,12 @@ export default class App extends React.Component {
 
     
     // 创建问题
-    // setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
-
-    //   createTopic(1, "测试nonce22", 500, 
-    //   config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
-    //     console.log(data);
-    //   })
-    //  });
+    //  setNonce(config.subChainAddr,config.userAddr2, config.rpcIp).then((data) => {
+    //    createTopic(1, "测试回车问题", 500, 
+    //    config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, config.rpcIp).then((data) => {
+    //      console.log(data);
+    //    })
+    //   });
 
     // 获取topic列表(暂未分页)      yes
     //  getTopicList(0,0, config.subChainAddr,

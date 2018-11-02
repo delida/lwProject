@@ -1,9 +1,14 @@
 import config from './lwconfig';
 import BigNumber from 'bignumber.js';
 import Chain3 from 'chain3';
+import {getVia} from './accountApi';
+import {vnodeAddress} from './accountApi';
+import {getChain3} from './accountApi';
 
-var chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp)); 
-var mc = chain3.mc;
+
+// var chain3 = new Chain3(new Chain3.providers.HttpProvider(vnodeAddress)); 
+// var mc = chain3.mc;
+var chain3 = getChain3();
 
 
 // 子链地址
@@ -16,7 +21,7 @@ var mc = chain3.mc;
 
 export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code, n, privateKey)
 {
-	
+	var via = getVia();
 	return new Promise(function(resolve, reject){
 		
 		chain3.version.getNetwork(function (err, version) {
@@ -31,7 +36,7 @@ export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code, n, pri
 				data: code,
 				shardingFlag: '0x1',
 				chainId: chain3.intToHex(version),
-				via: config.via
+				via: via
 			}
 			signedTx = chain3.signTransaction(rawTx, privateKey)
 			chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
@@ -53,32 +58,40 @@ export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code, n, pri
 export function createTopicSol(userAddr, pwd, amount, expblk, desc, subchainaddr, nonce, privatekey)
 {
 	
-	var award=chain3.toSha(amount,'mc')
-	var data=deChatInstance.createTopic.getData(award, expblk, desc)
-	console.log(data);
+	var award = amount * config.toSha;
+	var data=getInstance(subchainaddr).createTopic.getData(award, expblk, desc)
 	sendshardingflagtx(userAddr, pwd,subchainaddr,amount,data,nonce, privatekey);
 }
 
-var deChatABI = config.lwAbi;
-var deChatAddr='0x0000000000000000000000000000000000000020'
-var deChatContract=chain3.mc.contract(JSON.parse(deChatABI));
-var deChatInstance=deChatContract.at(deChatAddr);
+// var deChatABI = config.lwAbi;
+// var deChatAddr='0x0000000000000000000000000000000000000020'
+// var deChatContract=chain3.mc.contract(JSON.parse(deChatABI));
+// var deChatInstance=deChatContract.at(deChatAddr);
+
+export function getInstance(subChainAddr) {
+	chain3 = getChain3();
+	var deChatABI = config.lwAbi;
+	var deChatAddr='0x0000000000000000000000000000000000000020'
+	var deChatContract=chain3.mc.contract(JSON.parse(deChatABI));
+	return deChatContract.at(deChatAddr);
+}
+
 
 export function createSubTopicSol(userAddr, pwd, desc, subchainaddr,topHash, nonce, privatekey)
 {
-	var data=deChatInstance.creatSubTopic.getData(topHash, desc)
+	var data=getInstance(subchainaddr).creatSubTopic.getData(topHash, desc)
 	
 	sendshardingflagtx(userAddr, pwd,subchainaddr, "0",data,nonce, privatekey)
 }
 
 export function voteOnTopic(vote, pwd, subchainaddr,subHash, nonce, privatekey)
 {
-	var data=deChatInstance.voteOnTopic.getData(subHash)
+	var data=getInstance(subchainaddr).voteOnTopic.getData(subHash)
 	sendshardingflagtx(vote,pwd,subchainaddr,'0',data,nonce, privatekey)
 }
 export function autoCheckSol(userAddr, pwd, subchainaddr, nonce, privatekey)
 {
-	var data=deChatInstance.autoCheck.getData()
+	var data=getInstance(subchainaddr).autoCheck.getData()
 	
 	sendshardingflagtx(userAddr, pwd, subchainaddr,'0',data,nonce, privatekey)
 }

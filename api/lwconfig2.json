@@ -1,6 +1,6 @@
 {
 
-    "manageSolAddress":"0xac44b9740a1ff86ef420fedc7370196824d9781f", 
+    "manageSolAddress":"0x9134f6718feb77d797bc3a7857287f0fc8ffb771", 
     "via": "0xd868337c1a4167b5c6d1e273a0044016ea044d82",
     "vnodeIp": "http://47.100.179.157:8545",
     "packPerBlockTime": 10,

@@ -1,6 +1,7 @@
 import secp256k1 from 'secp256k1';
 import keccak from 'keccak';
 import {_post} from "./HttpFecth"
+import {_get} from "./HttpFecth"
 import {encrypt} from "./accounts"
 import {decrypt} from "./accounts"
 import {testbuyMintToken} from "./scAccount"
@@ -12,6 +13,7 @@ import {AsyncStorage} from 'react-native';
 import {sendtx} from './scAccount'
 import {currentNonce} from './bussApi'
 import crypto from 'crypto';
+import async from 'async';
 
 import config from "./lwconfig.json"
 import assert from "assert"
@@ -20,12 +22,12 @@ import Chain3 from 'chain3';
 //var pwd = config.pwd;
 //var userAddr = config.userAddr;
 //var subChainAddr = config.subChainAddr;
-var chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
+export var chain3 = null;//new Chain3(new Chain3.providers.HttpProvider(vnodeAddress));
+export var rpcIpCommon = "";
 // var ip = config.rpcIp;
 // var port = config.port;
 var packPerBlockTime = config.packPerBlockTime;   // 子链出块时间单位s
 var decimals = config.decimals;   // 子链token精度
-var mc = chain3.mc;
 
 //var marketabletokenaddr = config.marketableTokenAddr;
 // var marketabletokenAbi = config.marketabletokenAbi
@@ -66,20 +68,25 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
     var data = {"jsonrpc": "2.0", "id": 0, "method": methodName, "params": postParam};
     return new Promise(function(resolve, reject){
         _post(rpcIp, data).then((datas) => {
-            //console.log("datas---------" + JSON.stringify(datas))
 			var rpcResult;
-			console.log(datas);
-            //console.log(datas.result);
-            if (datas.result == undefined) {
-                rpcResult == "have exception";
+			if (datas == undefined) {
+				rpcResult = "connnect exception";   // rpc连接失败
+				resolve(rpcResult);
+			}
+            else if (datas.result == undefined) {
+				console.log("------------" + datas);
+				rpcResult = "have exception";   // rpc调用返回报错
+				resolve(rpcResult);
             }
             else if (datas.result.Storage == undefined) {
-                rpcResult = datas.result;
+				rpcResult = datas.result;
+				resolve(rpcResult);
             } else{
-                rpcResult = datas.result.Storage;
+				rpcResult = datas.result.Storage;
+				resolve(rpcResult);
             }
             
-		    resolve(rpcResult);
+		    //resolve(rpcResult);
         }); 
 
     });
@@ -144,23 +151,47 @@ export async function loginUser(addr, pwd, keystore) {
 // 查询主链的MOAC和erc20余额
 export var getBalance = function (userAddr, marketableTokenAddr) {
 	return new Promise(function(resolve, reject){
-		
-		mc.getBalance(userAddr, (err, moacRes) => {
+
+		chain3.mc.getBlockNumber(function(err, res) {
+			if (err != null) {   // 当前vnode连接失败
+				commonSetVnode().then((data) => {
+					chain3.mc.getBalance(userAddr, (err, moacRes) => {
+						var todata = "0x70a08231" + "000000000000000000000000" + userAddr.substring(2);
+						chain3.mc.call({
+						to: marketableTokenAddr,  // 合约地址
+						data: todata
+						}, 'latest', (error, response) => {
+							var balance = {};
+							balance.moacBalance = chain3.fromSha(moacRes.toString(), 'mc');
+							balance.erc20Balance = chain3.fromSha(parseInt(response.substring(2),16), 'mc');
+							balance.isSuccess = 1;
+							//console.log(balance);
+							resolve(balance);
+							
+						});	
+					});
+				});
+			} else {
+				chain3.mc.getBalance(userAddr, (err, moacRes) => {
+					var todata = "0x70a08231" + "000000000000000000000000" + userAddr.substring(2);
+					chain3.mc.call({
+					to: marketableTokenAddr,  // 合约地址
+					data: todata
+					}, 'latest', (error, response) => {
+						var balance = {};
+						balance.moacBalance = chain3.fromSha(moacRes.toString(), 'mc');
+						balance.erc20Balance = chain3.fromSha(parseInt(response.substring(2),16), 'mc');
+						balance.isSuccess = 1;
+						//console.log(balance);
+						resolve(balance);
+						
+					});	
+				});
+			}
 			
-			var todata = "0x70a08231" + "000000000000000000000000" + userAddr.substring(2);
-			chain3.mc.call({
-			to: marketableTokenAddr,  // 合约地址
-			data: todata
-			}, 'latest', (error, response) => {
-				var balance = {};
-				balance.moacBalance = chain3.fromSha(moacRes.toString(), 'mc');
-				balance.erc20Balance = chain3.fromSha(parseInt(response.substring(2),16), 'mc');
-				balance.isSuccess = 1;
-				//console.log(balance);
-				resolve(balance);
-				
-			});	
+			
 		});
+		
 	});	
 }
 
@@ -170,6 +201,7 @@ export var chargeToken = async function (userAddr, value, marketableTokenAddr, p
 	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
 	var privatekey = privatekeyObj.privateKey + "";
 	try {
+		console.log("开始充值------");
 		testbuyMintToken(userAddr, pwd, value, privatekey, subChainAddr);
 		return 1;
 	} catch (e) {
@@ -264,12 +296,13 @@ export var buyToken = function (userAddr, value) {
 
 // 提币
 export var redeemToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, rpcIp, exchangeRate) {
-	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+	var rpcIp = getRpcIp();
+	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd);
 	var privatekey = privatekeyObj.privateKey + "";
 	try {
 		var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
 		return getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
-			dappredeemFromMicroChain(userAddr, pwd, chain3.toSha(value, 'mc'), nonce, privatekey, subChainAddr);
+			dappredeemFromMicroChain(userAddr, pwd, value * config.toSha, nonce, privatekey, subChainAddr);
 			return 1;
 		});
 	} catch (e) {
@@ -360,7 +393,7 @@ export var transferMoac = async function (from, to, amount, pwd, keystore) {
 
 // coin转账
 export var transferCoin = async function (from, to, amount, subChainAddr, pwd, keystore, rpcIp) {
-
+	var rpcIp = getRpcIp();
 	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
 	var privatekey = privatekeyObj.privateKey + "";
 
@@ -378,7 +411,7 @@ export var transferCoin = async function (from, to, amount, subChainAddr, pwd, k
 			data: to,  
 			shardingFlag: '0x2',
 			chainId: chain3.intToHex(version),
-			via: config.via
+			via: via
 		}
 		signedTx = chain3.signTransaction(rawTx, privatekey)
 		chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
@@ -430,6 +463,7 @@ export var transferCoin = async function (from, to, amount, subChainAddr, pwd, k
 export function myHistoryList(pageNum, pageSize, userAddr, subChainAddr, rpcIp) {
 	var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
 	return new Promise ((resolve) => {
+		var rpcIp = getRpcIp();
 		getContractInfo(rpcIp, "ScsRPCMethod.GetTransactionRecords", postParam).then(function(result){
 			var myHistory = {};
 			if (result != null && result != undefined) {
@@ -570,23 +604,23 @@ function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableT
 // } 
 
 // 缓存测试
-export var setItem = function(addr, privateKey) {
-	AsyncStorage.setItem(addr, privateKey, (error) => {
+export var setItem = function(key, value) {
+	AsyncStorage.setItem(key, value, (error) => {
 		if (error) {
-			console.log("set fail-----" + error);
+			console.log("set cache fail-----" + error);
 		} else {
-			console.log("set success");
+			console.log("set cache success");
 		}
 	});
 }
 
-export var getItem = function(addr) {
+export var getItem = function(key) {
 	var flag = "";
-	AsyncStorage.getItem(addr, (error, result) => {
+	AsyncStorage.getItem(key, (error, result) => {
 		if (error) {
-			console.log("get fail------" + error);
+			console.log("get cache fail------" + error);
 		} else {
-			console.log("get success-----" + result);
+			console.log("get cache success-----" + result);
 			flag = result;
 			
 		}	
@@ -594,12 +628,12 @@ export var getItem = function(addr) {
 	return flag;
 }
 
-export var removeItem = function(addr) {
-	AsyncStorage.removeItem(addr, (error) => {
+export var removeItem = function(key) {
+	AsyncStorage.removeItem(key, (error) => {
 		if (!error) {
-			console.log("remove success");
+			console.log("remove cache success");
 		} else {
-			console.log("remove fail---------" + error);
+			console.log("remove cache fail---------" + error);
 		}
 	});
 } 
@@ -616,3 +650,152 @@ var compareByTimeValue = function (obj1, obj2) {
         return 0;
     }            
 } 
+
+export var via = "";
+export var vnodeAddress = "";
+// 随机选择一个可连接的vnode，放入缓存
+export var commonSetVnode = function () {
+	var ip = config.restfulUrl + "VnodeAddr/" + config.protocalAddress;
+	//var ip = "http://testnet.moac.io/106/VnodeAddr/0x4ba14fb9c358f44a258503d3b1c744b1b1975a82.json";
+	return new Promise((resolve) => {
+		_get(ip, null).then((datas) => {
+			if (datas != undefined) {
+				datas = randomChange(datas.VnodeList);  // 随机组合
+				var vnodeArr = [];
+				var vnodeInfo = {};
+				async.each(datas, function (item, callback) {
+					var c3 = new Chain3(new Chain3.providers.HttpProvider("http://" + item.VnodeAddress));
+					
+					c3.mc.getBlockNumber(function (err, blockNum) {
+						if (vnodeArr.length == 0) {
+							if (!err && blockNum != undefined && blockNum > 0) {   // 可以正常连接
+								via = item.via;
+								vnodeAddress = item.VnodeAddress;
+								vnodeInfo.via = via;
+								vnodeInfo.vnodeAddress = vnodeAddress;
+								vnodeArr.push(vnodeInfo);
+								chain3 = c3;
+							}
+						
+						}
+						callback(null);
+					});
+					
+				}, function (err) {
+					resolve(1);
+				});
+			} else {
+				// restful接口调用失败，则连接config中默认的vnode
+				via = item.via;
+				vnodeAddress = item.VnodeAddress;
+				chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
+				resolve(2);
+			}
+			
+			
+		  });
+
+
+
+
+
+	});
+	 
+}
+
+// 进入版块，设置vnode和rpc
+export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
+
+	var ip = config.restfulUrl + "MonitorAddr/" + subChainAddr;
+	var responseRes = {};
+	//var ip = "http://testnet.moac.io/106/MonitorAddr/0x8e048491b18c0cf8d0d2b3301b01133aefa12e31.json";
+	return new Promise((resolve) => {
+
+		commonSetVnode().then((data) => {
+			if (data == 1 || data == 2) {
+				_get(ip, null).then((datas) => {
+					// datas = {"MonitorList":[{"MonitorAddress":"47.107.75.89:8546"},{"MonitorAddress":"47.106.89.22:8546"}]};
+					if (datas != undefined) {
+						datas = randomChange(datas.MonitorList);  // 随机组合
+						var rpcArr = [];
+						var rpcInfo = {};
+						async.each(datas, function (item, callback) {
+							var rpcIpVal = "http://" + item.MonitorAddress + "/rpc";
+							var postParam = {"SubChainAddr": subChainAddr};
+								getContractInfo(rpcIpVal, "ScsRPCMethod.GetBlockNumber", postParam).then(function(result){
+									if (rpcArr.length == 0) {
+										if ("have exception" != result && "connnect exception" != result) {   // 可以正常连接
+											rpcIpCommon = rpcIpVal;
+											rpcInfo.rpcIp = rpcIpCommon;
+											rpcArr.push(rpcInfo);
+										}
+									
+								}
+								callback(null);
+								});
+							
+							}, function (err) {
+								if (rpcInfo.rpcIp == undefined) { 
+									// 当前所有的rpcIp都不可连接
+									responseRes.rpcIp = "";
+									responseRes.isSuccess = 0;   // 当前版块暂时不可用，请稍后重试！
+								} else {
+									// 可以连接
+									responseRes.rpcIp = rpcInfo.rpcIp;
+									if (data == 1) {
+										responseRes.isSuccess = 1;   // 正常情况
+									} else if (data == 2){
+										responseRes.isSuccess = 2;   // 备用节点服务连接成功
+									}
+									resolve(responseRes);
+								}
+								
+								
+							});
+					} else {
+						rpcIpCommon = rpcIp;
+						responseRes.isSuccess = 3;
+						responseRes.rpcIp = rpcIp ;
+						resolve(responseRes);   // 备用远程服务连接成功
+					}
+				
+				});
+			} 
+			// else {
+			// 	console.log("--------restful获取vnode接口调用失败");
+			// 	resolve("3");  
+			// }
+		});
+
+	}); 
+}
+
+
+// 校验是否可以连接
+// var verifyConnect = function () {
+
+// }
+
+// 获取一定范围内的随机整数
+function getRandomNum(minnum , maxnum){
+    return Math.floor(minnum + Math.random() * maxnum);
+}
+
+export function getChain3() {
+	return chain3;
+}
+
+export function getVia() {
+	return via;
+}
+
+export function getRpcIp() {
+	return rpcIpCommon;
+}
+
+// 随机打乱数组顺序
+function randomChange(array) {
+	return array.sort(function() {
+	     return (0.5-Math.random());
+	});
+}
