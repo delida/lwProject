@@ -116,8 +116,8 @@ export default class App extends React.Component {
     }
 
       
-    commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
-            setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
+    // commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+    //         setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
 
               // 版块列表
               // getBoardList().then((data) => {
@@ -193,11 +193,11 @@ export default class App extends React.Component {
 
 
 
-            });
+    //         });
 
         
     
-    });
+    // });
 
     
 

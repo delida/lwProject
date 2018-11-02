@@ -1,4 +1,15 @@
 {
+    "subChainAddr": "0x0a8371206fe88295c227839d5f2c4d1fe47efc7f",
+    "deployLwSolAdmin":"0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0",
+    "marketableTokenAddr":"0x50d6467356d7cbac7b4f9e50988c7b3a41cd4f3f",
+    "rpcIp": "http://47.107.75.89:8546/rpc",
+
+
+    "userAddr1":"0xe7e52b94e9a82351302260ec39a300e9f00aee4c",
+    "userAddr2":"0xb6d00a2265668fb0efaaba89ea24e816bd537ef7",
+    "userAddr3": "0x8bf33c7bceee4f04368e6f076d87dc78545b1564",
+
+
 
     "manageSolAddress":"0x262c6ffc3b579fd932266ed6a646de5077ebe78b", 
     "via": "0xd868337c1a4167b5c6d1e273a0044016ea044d82",
