@@ -686,8 +686,8 @@ export var commonSetVnode = function () {
 				});
 			} else {
 				// restful接口调用失败，则连接config中默认的vnode
-				via = item.via;
-				vnodeAddress = item.VnodeAddress;
+				via = config.via;
+				//vnodeAddress = item.VnodeAddress;
 				chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
 				resolve(2);
 			}
