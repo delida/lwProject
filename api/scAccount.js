@@ -5,11 +5,6 @@ import {getVia} from './accountApi';
 import {vnodeAddress} from './accountApi';
 import {getChain3} from './accountApi';
 
-//import fs from 'fs';
-
-
-//var chain3 = new Chain3(new Chain3.providers.HttpProvider(vnodeAddress)); 
-//var mc = chain3.mc;
 var chain3 = getChain3();
 var userAddr = config.userAddr;
 var subChainAddr = config.subChainAddr;
@@ -17,7 +12,6 @@ var marketableTokenAddr = config.marketableTokenAddr;
 
 	
 export	function sendtx(src, tgtaddr, amount, strData, privateKey) {
-		//var chain3 = getChain3();
 		return new Promise((resolve, reject) => {
 			
 			chain3.mc.getTransactionCount(src,function (err, txcount) {
@@ -86,20 +80,6 @@ export function dappredeemFromMicroChain(sender, passwd, amount, nonce, privateK
 	var via = getVia();
 	chain3 = getChain3();
 	return new Promise((resolve, reject) => {
-		// chain3.mc.sendTransaction(
-		// 	{
-		// 		from: sender,
-		// 		value:amount,
-		// 		to: subchainbase.address,
-		// 		gas: "0",
-		// 		gasPrice: "0",
-		// 		shardingflag: 1,
-		// 		nonce: 0,
-		// 		data: '0x89739c5b',
-		// 		via: config.via
-		// 	}, function (err, res) {
-		// 		resolve("111");
-		// 	});
 
 		chain3.version.getNetwork(function (err, version) {
 			var rawTx = {

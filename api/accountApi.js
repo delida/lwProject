@@ -19,20 +19,10 @@ import config from "./lwconfig.json"
 import assert from "assert"
 import Chain3 from 'chain3';
 
-//var pwd = config.pwd;
-//var userAddr = config.userAddr;
-//var subChainAddr = config.subChainAddr;
 export var chain3 = null;//new Chain3(new Chain3.providers.HttpProvider(vnodeAddress));
 export var rpcIpCommon = "";
-// var ip = config.rpcIp;
-// var port = config.port;
 var packPerBlockTime = config.packPerBlockTime;   // 子链出块时间单位s
 var decimals = config.decimals;   // 子链token精度
-
-//var marketabletokenaddr = config.marketableTokenAddr;
-// var marketabletokenAbi = config.marketabletokenAbi
-// var marketabletokenContract=chain3.mc.contract(JSON.parse(marketabletokenAbi));
-// export var marketabletoken=marketabletokenContract.at(marketabletokenaddr);
 
 const Bytes2HexString = (b)=> {
     let hexs = "";
@@ -71,22 +61,17 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
 			var rpcResult;
 			if (datas == undefined) {
 				rpcResult = "connnect exception";   // rpc连接失败
-				resolve(rpcResult);
 			}
             else if (datas.result == undefined) {
-				console.log("------------" + datas);
 				rpcResult = "have exception";   // rpc调用返回报错
-				resolve(rpcResult);
             }
             else if (datas.result.Storage == undefined) {
 				rpcResult = datas.result;
-				resolve(rpcResult);
             } else{
 				rpcResult = datas.result.Storage;
-				resolve(rpcResult);
             }
             
-		    //resolve(rpcResult);
+		    resolve(rpcResult);
         }); 
 
     });
@@ -94,7 +79,6 @@ export var getContractInfo = function(rpcIp, methodName, postParam) {
 };
 
 
-///////测试提交
 // 创建账户 (scripts环境不可用)
 export async function registerUser(pwd) {
 	var registerInfo = {};
@@ -114,10 +98,7 @@ export async function registerUser(pwd) {
 }
 
 
-// 登录账户   yes
-// 1 输入的userAddr是否在移动端存储的所有keystore中，若不存在直接返回钱包地址或者密码错误
-// 2 若存在，传入userAddr, pwd, keystore调用此方法
-// 3 pwd和keystore解析出来私钥，地址，对比地址和输入地址是否一致
+// 登录
 export async function loginUser(addr, pwd, keystore) {
 	try {
 		var keystoreObj = JSON.parse(keystore);
@@ -125,13 +106,6 @@ export async function loginUser(addr, pwd, keystore) {
 		var address = decryptVal.address + '';
 		var privateKey = decryptVal.privateKey + '';
 		if (address.toLowerCase() == addr.toLowerCase()) {
-			// AsyncStorage.setItem(address.toLowerCase(), privateKey, (error) => {
-			// 	if (error) {
-			// 		console.log("设置privateKey缓存失败------" + error);
-			// 	} else {
-			// 		console.log("设置privateKey缓存成功------");
-			// 	}
-			// });
 			return 1
 		} else {
 			return 0;  // 登录失败
@@ -165,7 +139,6 @@ export var getBalance = function (userAddr, marketableTokenAddr) {
 							balance.moacBalance = chain3.fromSha(moacRes.toString(), 'mc');
 							balance.erc20Balance = chain3.fromSha(parseInt(response.substring(2),16), 'mc');
 							balance.isSuccess = 1;
-							//console.log(balance);
 							resolve(balance);
 							
 						});	
@@ -182,7 +155,6 @@ export var getBalance = function (userAddr, marketableTokenAddr) {
 						balance.moacBalance = chain3.fromSha(moacRes.toString(), 'mc');
 						balance.erc20Balance = chain3.fromSha(parseInt(response.substring(2),16), 'mc');
 						balance.isSuccess = 1;
-						//console.log(balance);
 						resolve(balance);
 						
 					});	
@@ -376,18 +348,6 @@ export var transferMoac = async function (from, to, amount, pwd, keystore) {
 			return 0;
 		}
 	});
-	// return new Promise((resolve) => {
-	// 	AsyncStorage.getItem(from, (error, privatekey) => {
-	// 		sendtx(from, to, amount, "", privatekey).then((data) => {
-	// 			if (data == "success") {
-	// 				resolve(1);
-	// 			} else {
-	// 				resolve(0);
-	// 			}
-	// 		});
-	// 	});
-		
-	// });
 }	
 
 
@@ -398,7 +358,6 @@ export var transferCoin = async function (from, to, amount, subChainAddr, pwd, k
 	var privatekey = privatekeyObj.privateKey + "";
 
 	var nonce = await currentNonce(subChainAddr, from, rpcIp);
-	//currentNonce(subChainAddr, from, rpcIp).then((currentNonce) => {
 	chain3.version.getNetwork(function (err, version) {
 		var rawTx = {
 			nonce: chain3.intToHex(nonce),
@@ -423,40 +382,8 @@ export var transferCoin = async function (from, to, amount, subChainAddr, pwd, k
 			}
 		});
 	});
-	//});
 	
 	return 1;
-	// return new Promise(function(resolve, reject){
-	// 	//var privatekey = decrypt(keystore, pwd).privateKey + "";
-	// 	AsyncStorage.getItem(from, (error, privatekey) => {
-	// 		chain3.version.getNetwork(function (err, version) {
-	// 			var rawTx = {
-	// 				nonce: chain3.intToHex(currentNonce()),
-	// 				from: from,
-	// 				gas: '0x0',
-	// 				gasLimit: '0x0',//chain3.intToHex(0),
-	// 				gasPrice: '0x0',//chain3.intToHex(0),
-	// 				to: subChainAddr, 
-	// 				value: chain3.toHex(chain3.toSha(amount, 'mc')),
-	// 				data: to,  
-	// 				shardingFlag: '0x2',
-	// 				chainId: chain3.intToHex(version),
-	// 				via: config.via
-	// 			}
-	// 			signedTx = chain3.signTransaction(rawTx, privatekey)
-	// 			chain3.mc.sendRawTransaction(signedTx, function (err, hash) {
-	// 				if (!err) {
-	// 					resolve(1);
-		
-	// 				} else {
-	// 					console.log(err);
-	// 					resolve(0);
-	// 				}
-	// 			});
-	// 		});
-	// 	});
-		
-	// });	
 }
 
 // 充值提币历史（充值包括进行中，已完成，   提币包括进行中，已完成。   时间倒叙）
@@ -541,7 +468,6 @@ export function myHistoryList(pageNum, pageSize, userAddr, subChainAddr, rpcIp) 
 				myHistory.enterList = enterList.sort(compareByTimeValue);
 				myHistory.redeemList = redeemList.sort(compareByTimeValue);
 	
-	
 			}
 			
 			resolve(myHistory);
@@ -564,18 +490,6 @@ function timestampToTime(shijianchuo) {
 	return y + '-' + add0(m) + '-' + add0(d) + ' ' + add0(h) + ':' + add0(mm) + ':' + add0(s);
 }
 
-// function timestampToTime(timestamp) {
-// 	var date = new Date(timestamp * 1000);//时间戳为10位需*1000，时间戳为13位的话不需乘1000
-// 	var Y = date.getFullYear() + '-';
-// 	var M = (date.getMonth()+1 < 10 ? '0'+(date.getMonth()+1) : date.getMonth()+1) + '-';
-// 	var D = date.getDate() + ' ';
-// 	var h = date.getHours() + ':';
-// 	var m = date.getMinutes() + ':';
-// 	var s = date.getSeconds();
-// 	return Y+M+D+h+m+s;
-// }
-
-
 // 提币定时器
 function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1) {
 	var interval = setInterval(function () {
@@ -591,17 +505,6 @@ function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableT
 		});
 	}, 180000);
 }
-
-
-
-// var myNonce = 0;
-// // 登录成功，调用获取当前nonce
-// export var currentNonce = function (subChainAddr, userAddr) {
-// 	var postParam = {"SubChainAddr": subChainAddr, "Sender": userAddr};
-// 	getContractInfo(rpcIp, "ScsRPCMethod.GetNonce", postParam).then(function(nonce){
-// 		myNonce = nonce;
-// 	});
-// } 
 
 // 缓存测试
 export var setItem = function(key, value) {
@@ -656,7 +559,6 @@ export var vnodeAddress = "";
 // 随机选择一个可连接的vnode，放入缓存
 export var commonSetVnode = function () {
 	var ip = config.restfulUrl + "VnodeAddr/" + config.protocalAddress;
-	//var ip = "http://testnet.moac.io/106/VnodeAddr/0x4ba14fb9c358f44a258503d3b1c744b1b1975a82.json";
 	return new Promise((resolve) => {
 		_get(ip, null).then((datas) => {
 			if (datas != undefined) {
@@ -687,7 +589,6 @@ export var commonSetVnode = function () {
 			} else {
 				// restful接口调用失败，则连接config中默认的vnode
 				via = config.via;
-				//vnodeAddress = item.VnodeAddress;
 				chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
 				resolve(2);
 			}
@@ -705,16 +606,13 @@ export var commonSetVnode = function () {
 
 // 进入版块，设置vnode和rpc
 export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
-
+	var start = new Date().getTime();
 	var ip = config.restfulUrl + "MonitorAddr/" + subChainAddr;
 	var responseRes = {};
-	//var ip = "http://testnet.moac.io/106/MonitorAddr/0x8e048491b18c0cf8d0d2b3301b01133aefa12e31.json";
 	return new Promise((resolve) => {
-
 		commonSetVnode().then((data) => {
 			if (data == 1 || data == 2) {
 				_get(ip, null).then((datas) => {
-					// datas = {"MonitorList":[{"MonitorAddress":"47.107.75.89:8546"},{"MonitorAddress":"47.106.89.22:8546"}]};
 					if (datas != undefined) {
 						datas = randomChange(datas.MonitorList);  // 随机组合
 						var rpcArr = [];
@@ -735,10 +633,11 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 								});
 							
 							}, function (err) {
-								if (rpcInfo.rpcIp == undefined) { 
+								if (rpcInfo.rpcIp == undefined) {
 									// 当前所有的rpcIp都不可连接
 									responseRes.rpcIp = "";
 									responseRes.isSuccess = 0;   // 当前版块暂时不可用，请稍后重试！
+									
 								} else {
 									// 可以连接
 									responseRes.rpcIp = rpcInfo.rpcIp;
@@ -747,34 +646,30 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 									} else if (data == 2){
 										responseRes.isSuccess = 2;   // 备用节点服务连接成功
 									}
-									resolve(responseRes);
 								}
-								
+								var end = new Date().getTime();
+								console.log("restful接口调用耗时为：接口调用耗时为：");
+								console.log((end-start)/1000);
+								resolve(responseRes);
 								
 							});
 					} else {
 						rpcIpCommon = rpcIp;
 						responseRes.isSuccess = 3;
 						responseRes.rpcIp = rpcIp ;
+						var end = new Date().getTime();
+
+						console.log("restful接口调用耗时为：");
+						console.log((end-start)/1000);
 						resolve(responseRes);   // 备用远程服务连接成功
 					}
 				
 				});
 			} 
-			// else {
-			// 	console.log("--------restful获取vnode接口调用失败");
-			// 	resolve("3");  
-			// }
 		});
 
 	}); 
 }
-
-
-// 校验是否可以连接
-// var verifyConnect = function () {
-
-// }
 
 // 获取一定范围内的随机整数
 function getRandomNum(minnum , maxnum){

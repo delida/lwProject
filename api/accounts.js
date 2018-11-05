@@ -22,21 +22,6 @@
 
 "use strict";
 
-// var _ = require("underscore");
-// var core = require('web3-core');
-// var Method = require('web3-core-method');
-// var Promise = require('any-promise');
-// var Account = require("eth-lib/lib/account");
-// var Hash = require("eth-lib/lib/hash");
-// var RLP = require("eth-lib/lib/rlp");
-// var Nat = require("eth-lib/lib/nat");
-// var Bytes = require("eth-lib/lib/bytes");
-// var cryp = (typeof global === 'undefined') ? require('crypto-browserify') : require('crypto');
-// var scryptsy = require('scrypt.js');
-// var uuid = require('uuid');
-// var utils = require('web3-utils');
-// var helpers = require('web3-core-helpers');
-
 import _ from 'underscore';
 import core from 'web3-core';
 import Method from 'web3-core-method';

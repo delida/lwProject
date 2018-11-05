@@ -5,19 +5,7 @@ import {getVia} from './accountApi';
 import {vnodeAddress} from './accountApi';
 import {getChain3} from './accountApi';
 
-
-// var chain3 = new Chain3(new Chain3.providers.HttpProvider(vnodeAddress)); 
-// var mc = chain3.mc;
 var chain3 = getChain3();
-
-
-// 子链地址
-// var subchainaddr1 = config.subChainAddr;
-// var subchainaddr2 = ""
-
-// var baseaddr = config.userAddr;
-// var basename = config.pwd;
-
 
 export function sendshardingflagtx(userAddr,pwd,subchainaddr,amount,code, n, privateKey)
 {
@@ -62,11 +50,6 @@ export function createTopicSol(userAddr, pwd, amount, expblk, desc, subchainaddr
 	var data=getInstance(subchainaddr).createTopic.getData(award, expblk, desc)
 	sendshardingflagtx(userAddr, pwd,subchainaddr,amount,data,nonce, privatekey);
 }
-
-// var deChatABI = config.lwAbi;
-// var deChatAddr='0x0000000000000000000000000000000000000020'
-// var deChatContract=chain3.mc.contract(JSON.parse(deChatABI));
-// var deChatInstance=deChatContract.at(deChatAddr);
 
 export function getInstance(subChainAddr) {
 	chain3 = getChain3();
