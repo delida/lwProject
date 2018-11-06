@@ -124,7 +124,7 @@ contract DeChat is DappBase{
 	uint public modPrize = 9;
 	uint public devPrize = 1; 
 	uint public voteAwardCount = 100; //only first 100 voter get reward
-	uint public maxExpBlk = 50;
+	uint public maxExpBlk = 200;
 	
 	address internal owner;
 	address internal developer;
