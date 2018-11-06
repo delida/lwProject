@@ -26,31 +26,43 @@ contract DappBase {
 		owner = msg.sender;
 	}
 
-    function getRedeemMapping(address userAddr, uint start, uint end) public view returns (uint[] redeemingAmt, uint[] redeemingtime) {
+    function getRedeemMapping(address userAddr, uint start, uint end) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
         uint i = 0;
         uint j = 0;
         uint k = 0;
         
         for (i = start; i <= end; i++) {
-            for (k = 0; k < redeem[i].userAddr.length; k++) {
-                if (redeem[i].userAddr[k] == userAddr) {
-                    j++;
+            if (userAddr != address(0)) {
+                for (k = 0; k < redeem[i].userAddr.length; k++) {
+                    if (redeem[i].userAddr[k] == userAddr) {
+                        j++;
+                    }
                 }
+            } else {
+                j += redeem[i].userAddr.length;
             }
         }
+        address[] memory addrs = new address[](j);
         uint[] memory amounts = new uint[](j);
         uint[] memory times = new uint[](j);
         j = 0;
         for (i = start; i <= end; i++) {
             for (k = 0; k < redeem[i].userAddr.length; k++) {
-                if (redeem[i].userAddr[k] == userAddr) {
+                if (userAddr != address(0)) {
+                    if (redeem[i].userAddr[k] == userAddr) {
+                        amounts[j] = redeem[i].userAmount[k];
+                        times[j] = redeem[i].time[k];
+                        j++;
+                    }
+                } else {
+                    addrs[j] = redeem[i].userAddr[k];
                     amounts[j] = redeem[i].userAmount[k];
                     times[j] = redeem[i].time[k];
                     j++;
                 }
             }
         }
-        return (amounts, times);
+        return (addrs, amounts, times);
     }
 	
 	function redeemFromMicroChain() public payable {//The user takes the coin to the main chain erc20
