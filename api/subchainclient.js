@@ -78,3 +78,18 @@ export function autoCheckSol(userAddr, pwd, subchainaddr, nonce, privatekey)
 	
 	sendshardingflagtx(userAddr, pwd, subchainaddr,'0',data,nonce, privatekey)
 }
+
+export function setTopicStatusSol(userAddr, pwd, subchainaddr, nonce, privatekey, hash, status)
+{
+	var data=getInstance(subchainaddr).setTopicStatus.getData(hash, status)
+	
+	sendshardingflagtx(userAddr, pwd, subchainaddr,'0',data,nonce, privatekey)
+}
+
+
+export function setSubTopicStatusSol(userAddr, pwd, subchainaddr, nonce, privatekey, hash, status)
+{
+	var data=getInstance(subchainaddr).setSubTopicStatus.getData(hash, status)
+	
+	sendshardingflagtx(userAddr, pwd, subchainaddr,'0',data,nonce, privatekey)
+}
