@@ -91,6 +91,7 @@ export async function registerUser(pwd) {
 	
 	var privateKeyStr = "0x" + privateKey.toString('hex');
 	var addressStr = "0x" + address.toString('hex');
+
 	var keystore = await encrypt(privateKeyStr, pwd);
 	registerInfo.userAddr = addressStr;
 	registerInfo.keystore = keystore;
@@ -171,6 +172,7 @@ export var getBalance = function (userAddr, marketableTokenAddr) {
 // 充值（moac兑换主链token, 然后充值进子链）
 export var chargeToken = async function (userAddr, value, marketableTokenAddr, pwd, keystore, subChainAddr, exchangeRate) {
 	var privatekeyObj = await decrypt(JSON.parse(keystore), pwd)
+
 	var privatekey = privatekeyObj.privateKey + "";
 	try {
 		console.log("开始充值------");
