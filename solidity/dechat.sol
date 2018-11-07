@@ -201,11 +201,11 @@ contract DeChat is DappBase{
 		topics[hash].hash = hash;
 		topics[hash].owner = msg.sender;
 		topics[hash].award = award;
-		if( expblk < maxExpBlk) {
-			topics[hash].expblk = expblk;
-		} else {
-			topics[hash].expblk = maxExpBlk;
+		uint _expblks = expblk;
+		if( expblk > maxExpBlk) {
+			_expblks = maxExpBlk;
 		}
+		topics[hash].expblk = _expblks;
 		topics[hash].startblk = block.number;
 		topics[hash].desc = desc;
 		topics[hash].closed = false;
@@ -213,7 +213,7 @@ contract DeChat is DappBase{
 		topics[hash].bestVoteCount = 0;
 		topics[hash].secondBestVoteCount = 0;
 		//add loop value
-		expinfo[block.number + expblk].push(hash);
+		expinfo[block.number + _expblks].push(hash);
 		newTopicIndex[hash]=newTopicList.length;
 		newTopicList.push(hash);
 
