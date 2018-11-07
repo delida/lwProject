@@ -26,31 +26,49 @@ contract DappBase {
 		owner = msg.sender;
 	}
 
-    function getRedeemMapping(address userAddr, uint start, uint end) public view returns (uint[] redeemingAmt, uint[] redeemingtime) {
+    function getCurNodeList() public view returns (address[] nodeList) {
+        
+        return curNodeList;
+    }
+
+
+    function getRedeemMapping(address userAddr, uint start, uint end) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
         uint i = 0;
         uint j = 0;
         uint k = 0;
         
         for (i = start; i <= end; i++) {
-            for (k = 0; k < redeem[i].userAddr.length; k++) {
-                if (redeem[i].userAddr[k] == userAddr) {
-                    j++;
+            if (userAddr != address(0)) {
+                for (k = 0; k < redeem[i].userAddr.length; k++) {
+                    if (redeem[i].userAddr[k] == userAddr) {
+                        j++;
+                    }
                 }
+            } else {
+                j += redeem[i].userAddr.length;
             }
         }
+        address[] memory addrs = new address[](j);
         uint[] memory amounts = new uint[](j);
         uint[] memory times = new uint[](j);
         j = 0;
         for (i = start; i <= end; i++) {
             for (k = 0; k < redeem[i].userAddr.length; k++) {
-                if (redeem[i].userAddr[k] == userAddr) {
+                if (userAddr != address(0)) {
+                    if (redeem[i].userAddr[k] == userAddr) {
+                        amounts[j] = redeem[i].userAmount[k];
+                        times[j] = redeem[i].time[k];
+                        j++;
+                    }
+                } else {
+                    addrs[j] = redeem[i].userAddr[k];
                     amounts[j] = redeem[i].userAmount[k];
                     times[j] = redeem[i].time[k];
                     j++;
                 }
             }
         }
-        return (amounts, times);
+        return (addrs, amounts, times);
     }
 	
 	function redeemFromMicroChain() public payable {//The user takes the coin to the main chain erc20
@@ -183,17 +201,19 @@ contract DeChat is DappBase{
 		topics[hash].hash = hash;
 		topics[hash].owner = msg.sender;
 		topics[hash].award = award;
-		if( expblk < maxExpBlk) {
-			topics[hash].expblk = expblk;
-		} else {
-			topics[hash].expblk = maxExpBlk;
+		uint _expblks = expblk;
+		if( expblk > maxExpBlk) {
+			_expblks = maxExpBlk;
 		}
+		topics[hash].expblk = _expblks;
 		topics[hash].startblk = block.number;
 		topics[hash].desc = desc;
 		topics[hash].closed = false;
 		topics[hash].status = 0;
+		topics[hash].bestVoteCount = 0;
+		topics[hash].secondBestVoteCount = 0;
 		//add loop value
-		expinfo[block.number + expblk].push(hash);
+		expinfo[block.number + _expblks].push(hash);
 		newTopicIndex[hash]=newTopicList.length;
 		newTopicList.push(hash);
 
@@ -219,11 +239,13 @@ contract DeChat is DappBase{
 			subTopics[topichash].voters.push(msg.sender);
 		}
 
-		if( subTopics[topichash].voteCount > topics[parenthash].bestVoteCount ) {
-			//swap best and secnd best
-			topics[parenthash].secondBestHash = topics[parenthash].bestHash;
-			topics[parenthash].secondBestVoteCount = topics[parenthash].bestVoteCount;
-			topics[parenthash].bestHash = topichash;
+		if( subTopics[topichash].voteCount > topics[parenthash].bestVoteCount ) {			
+			if (topics[parenthash].bestHash != topichash) {
+				//swap best and secnd best
+				topics[parenthash].secondBestHash = topics[parenthash].bestHash;
+				topics[parenthash].secondBestVoteCount = topics[parenthash].bestVoteCount;
+				topics[parenthash].bestHash = topichash;
+			}
 			topics[parenthash].bestVoteCount = subTopics[topichash].voteCount;
 			updateMyTopic(topics[parenthash]);
 			return key;
@@ -250,6 +272,7 @@ contract DeChat is DappBase{
 		subTopics[hash].reward = 0;
 		subTopics[hash].parent = parenthash;
 		subTopics[hash].status = 0;
+		subTopics[hash].voteCount = 0;
 		//add to ans list
 		topicAns[parenthash].push(hash);
 		return hash;
@@ -327,6 +350,10 @@ contract DeChat is DappBase{
 
 		subTopics[hash].status = status;
 		return hash;
+	}
+
+	function getLastProcBlk() public returns(uint) {
+		return lastProcBlk;
 	}
 
 	function autoCheck() public {
