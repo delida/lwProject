@@ -352,6 +352,10 @@ contract DeChat is DappBase{
 		return hash;
 	}
 
+	function getLastProcBlk() public returns(uint) {
+		return lastProcBlk;
+	}
+
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
 		uint rewardback = 0;
