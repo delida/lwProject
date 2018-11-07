@@ -26,6 +26,12 @@ contract DappBase {
 		owner = msg.sender;
 	}
 
+    function getCurNodeList() public view returns (address[] nodeList) {
+        
+        return curNodeList;
+    }
+
+
     function getRedeemMapping(address userAddr, uint start, uint end) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
         uint i = 0;
         uint j = 0;
