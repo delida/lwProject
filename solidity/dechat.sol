@@ -210,6 +210,8 @@ contract DeChat is DappBase{
 		topics[hash].desc = desc;
 		topics[hash].closed = false;
 		topics[hash].status = 0;
+		topics[hash].bestVoteCount = 0;
+		topics[hash].secondBestVoteCount = 0;
 		//add loop value
 		expinfo[block.number + expblk].push(hash);
 		newTopicIndex[hash]=newTopicList.length;
@@ -237,11 +239,13 @@ contract DeChat is DappBase{
 			subTopics[topichash].voters.push(msg.sender);
 		}
 
-		if( subTopics[topichash].voteCount > topics[parenthash].bestVoteCount ) {
-			//swap best and secnd best
-			topics[parenthash].secondBestHash = topics[parenthash].bestHash;
-			topics[parenthash].secondBestVoteCount = topics[parenthash].bestVoteCount;
-			topics[parenthash].bestHash = topichash;
+		if( subTopics[topichash].voteCount > topics[parenthash].bestVoteCount ) {			
+			if (topics[parenthash].bestHash != topichash) {
+				//swap best and secnd best
+				topics[parenthash].secondBestHash = topics[parenthash].bestHash;
+				topics[parenthash].secondBestVoteCount = topics[parenthash].bestVoteCount;
+				topics[parenthash].bestHash = topichash;
+			}
 			topics[parenthash].bestVoteCount = subTopics[topichash].voteCount;
 			updateMyTopic(topics[parenthash]);
 			return key;
@@ -268,6 +272,7 @@ contract DeChat is DappBase{
 		subTopics[hash].reward = 0;
 		subTopics[hash].parent = parenthash;
 		subTopics[hash].status = 0;
+		subTopics[hash].voteCount = 0;
 		//add to ans list
 		topicAns[parenthash].push(hash);
 		return hash;
