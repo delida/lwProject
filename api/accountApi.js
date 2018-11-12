@@ -623,7 +623,6 @@ export var commonSetVnode = function () {
 					if (item.VnodeAddress != "" && item.VnodeAddress != null && 
 							item.via != "" && item.via != null) {
 						var c3 = new Chain3(new Chain3.providers.HttpProvider("http://" + item.VnodeAddress));
-					
 						c3.mc.getBlockNumber(function (err, blockNum) {
 							if (vnodeArr.length == 0) {
 								if (!err && blockNum != undefined && blockNum > 0) {   // 可以正常连接
@@ -633,13 +632,17 @@ export var commonSetVnode = function () {
 									vnodeInfo.vnodeAddress = vnodeAddress;
 									vnodeArr.push(vnodeInfo);
 									chain3 = c3;
+
 								}
 							
 							}
-							
+							callback(null);
 						});
+					} 
+					else {
+						callback(null);
 					}
-					callback(null);
+					
 					
 				}, function (err) {
 					resolve(1);
