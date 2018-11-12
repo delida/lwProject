@@ -1058,71 +1058,71 @@ export function getSubTopics() {
 
 // user1投票第一个评论数组
 function vote1 (voteArr1) {
-  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
-    setNonce(config.subChainAddr, config.userAddr1, data.rpcIp).then((data) => {
-      return new Promise ((resolve) => {
-        var flag = 0;
-        voteArr1.forEach(function (item) {
-          approveSubTopic(config.userAddr1, item.subTopicHash, config.subChainAddr,
-            config.pwd, config.keystore_youTest, "").then((data) => {
-              flag ++;
-              if (flag == voteArr1.length) {
-                resolve(1);
-              }
-            });
-        });
+  // commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+  //   setNonce(config.subChainAddr, config.userAddr1, data.rpcIp).then((data) => {
+  //     return new Promise ((resolve) => {
+  //       var flag = 0;
+  //       voteArr1.forEach(function (item) {
+  //         approveSubTopic(config.userAddr1, item.subTopicHash, config.subChainAddr,
+  //           config.pwd, config.keystore_youTest, "").then((data) => {
+  //             flag ++;
+  //             if (flag == voteArr1.length) {
+  //               resolve(1);
+  //             }
+  //           });
+  //       });
     
-      });
+  //     });
 
-    });
-    });
+  //   });
+  //   });
   
   
 }
 
 // user2投票第一个评论数组
 function vote2 (voteArr2) {
-  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
-    setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
-      return new Promise ((resolve) => {
-        var flag = 0;
-        voteArr2.forEach(function (item) {
-          approveSubTopic(config.userAddr2, item.subTopicHash, config.subChainAddr,
-            config.pwd, config.keystore_myTest, "").then((data) => {
-              flag ++;
-              if (flag == voteArr2.length) {
-                resolve(1);
-              }
-            });
-        });
+  // commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+  //   setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
+  //     return new Promise ((resolve) => {
+  //       var flag = 0;
+  //       voteArr2.forEach(function (item) {
+  //         approveSubTopic(config.userAddr2, item.subTopicHash, config.subChainAddr,
+  //           config.pwd, config.keystore_myTest, "").then((data) => {
+  //             flag ++;
+  //             if (flag == voteArr2.length) {
+  //               resolve(1);
+  //             }
+  //           });
+  //       });
     
-      });
-    });
-  });
+  //     });
+  //   });
+  // });
   
   
 }
 
 // user3投票第二个评论数组
 function vote3 (voteArr3) {
-  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
-    setNonce(config.subChainAddr, config.userAddr4, data.rpcIp).then((data) => {
-      return new Promise ((resolve) => {
-        var flag = 0;
-        voteArr3.forEach(function (item) {
-          approveSubTopic(config.userAddr4, item.subTopicHash, config.subChainAddr,
-            config.pwd, config.keystore_ownerTest, "").then((data) => {
-              flag ++;
-              if (flag == voteArr3.length) {
-                resolve(1);
-              }
-            });
-        });
+  // commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+  //   setNonce(config.subChainAddr, config.userAddr4, data.rpcIp).then((data) => {
+  //     return new Promise ((resolve) => {
+  //       var flag = 0;
+  //       voteArr3.forEach(function (item) {
+  //         approveSubTopic(config.userAddr4, item.subTopicHash, config.subChainAddr,
+  //           config.pwd, config.keystore_ownerTest, "").then((data) => {
+  //             flag ++;
+  //             if (flag == voteArr3.length) {
+  //               resolve(1);
+  //             }
+  //           });
+  //       });
     
-      });
+  //     });
 
-    });
-  });
+  //   });
+  // });
   
   
 }
