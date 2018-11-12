@@ -16,6 +16,7 @@ import {vnodeAddress} from './accountApi';
 import {getChain3} from './accountApi';
 import {getRpcIp} from './accountApi';
 import {commonSetVnode} from './accountApi';
+import {getCurrentTime} from './accountApi';
 
 
 var topicIndex = config.topicIndex;
@@ -102,7 +103,7 @@ export var getHttpInfo = function(word) {
 };
 
 var t = Date.now();  
-function sleep(d){  
+export function sleep(d){  
     while(Date.now() - t <= d);  
 }
 
@@ -161,8 +162,6 @@ export var getTopicList = function (pageNum, pageSize, subChainAddr, rpcIp, depl
           getContractInfo(rpcIp,"ScsRPCMethod.GetBlockNumber", postParam4).then(function(currentBlockNum){
             getContractInfo(rpcIp,"ScsRPCMethod.AnyCall", postParam1).then(function(topicList){
   
-  
-              console.log(topicList);
               getBoardOwner(rpcIp, subChainAddr, deployLwSolAdmin).then((ownerAddr) => {
                 if (userAddr == ownerAddr) {
                   // 当前登录人是版主
@@ -946,3 +945,185 @@ function UnicodeToAscii(content) {
 	result += String.fromCharCode(code[i].replace(/[&#;]/g, ''));
 	return result;
 }
+
+// 批量点赞
+// export function approveSubTopics() {
+//   getSubTopics().then((data) => {
+//     var arr1 = arrInfo.arr1;
+//     var arr2 = arrInfo.arr2;
+//     for ()
+//   });
+// }
+
+// 批量创建问题
+export function createManyTopics () {
+  return new Promise ((data) => {
+    for (var i = 1; i <= 3; i++) {
+      createTopic(1, getCurrentTime() + "--第"+ i + "个问题？", 300, 
+      config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, "").then((data) => {
+        if (i == 3) {
+          resolve(1);
+        }
+      });
+     
+    }
+  });
+  
+}
+
+// 批量创建回答
+export function createManySubTopics () {
+  getTopicList(0,0, config.subChainAddr, "", "0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0", config.userAddr2).then((data) => {
+    data.topicArr.forEach(function (item, index) {
+        for(var i = 1; i <= 5; i++) {
+          createSubTopic(item.topicHash, 
+            getCurrentTime() + "--第"+ i + "个回答", config.userAddr2, config.pwd, keystore_myTest, config.subChainAddr, "").then((data) => {
+            console.log("-----------" + data);
+          });
+        }
+        
+    });
+  });
+}
+              
+
+
+// 批量点赞
+export function approveSubTopics() {
+  return new Promise ((resolve) => {
+    getSubTopics().then((arrInfo) => {
+      console.log("----------" + arrInfo);
+      var voteArr1 = arrInfo.arr1;
+      var voteArr2 = arrInfo.arr2;
+    
+      vote1(voteArr1).then((data1) => {
+        if (data1 == 1) {
+          vote2(voteArr2).then((data2) => {
+            if (data2 == 1) {
+              vote3(voteArr3).then((data3) => {
+                if (data3 == 1) {
+                  resolve(1);
+                }
+        
+              });
+            }
+    
+          });
+        }
+      })
+    
+    });
+  });
+}
+
+
+
+export function getSubTopics() {
+  return new Promise ((resolve) => {
+    getTopicList(0,0, config.subChainAddr, "", "0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0", config.userAddr2).then((data1) => {
+
+      console.log("=============" +data1);
+      var arr1 = [];
+      var arr2 = [];
+      var flag = 0;
+      var arrInfo = {};
+      data1.topicArr.forEach(function (item, index) {
+          
+          getSubTopicList(item.topicHash,
+           0,0, config.subChainAddr,"", 1, config.deployLwSolAdmin, config.userAddr2).then((data2) => {
+           console.log(data2);
+
+            flag ++;
+            if (data2.subTopicList.length > 0) {
+              arr1.push(data2.subTopicList[0].subTopicHash);
+            arr2.push(data2.subTopicList[1].subTopicHash);
+            if (flag == data1.topicArr.length) {
+              arrInfo.arr1 = arr1;
+              arrInfo.arr2 = arr2;
+              resolve (arrInfo);
+            }
+            }
+            
+
+
+          });
+          
+      });
+    
+    });
+  });
+  
+}
+
+
+// user1投票第一个评论数组
+function vote1 (voteArr1) {
+  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+    setNonce(config.subChainAddr, config.userAddr1, data.rpcIp).then((data) => {
+      return new Promise ((resolve) => {
+        var flag = 0;
+        voteArr1.forEach(function (item) {
+          approveSubTopic(config.userAddr1, item.subTopicHash, config.subChainAddr,
+            config.pwd, config.keystore_youTest, "").then((data) => {
+              flag ++;
+              if (flag == voteArr1.length) {
+                resolve(1);
+              }
+            });
+        });
+    
+      });
+
+    });
+    });
+  
+  
+}
+
+// user2投票第一个评论数组
+function vote2 (voteArr2) {
+  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+    setNonce(config.subChainAddr, config.userAddr2, data.rpcIp).then((data) => {
+      return new Promise ((resolve) => {
+        var flag = 0;
+        voteArr2.forEach(function (item) {
+          approveSubTopic(config.userAddr2, item.subTopicHash, config.subChainAddr,
+            config.pwd, config.keystore_myTest, "").then((data) => {
+              flag ++;
+              if (flag == voteArr2.length) {
+                resolve(1);
+              }
+            });
+        });
+    
+      });
+    });
+  });
+  
+  
+}
+
+// user3投票第二个评论数组
+function vote3 (voteArr3) {
+  commonSetRpcAndVnode(config.subChainAddr, config.rpcIp).then((data) => {
+    setNonce(config.subChainAddr, config.userAddr4, data.rpcIp).then((data) => {
+      return new Promise ((resolve) => {
+        var flag = 0;
+        voteArr3.forEach(function (item) {
+          approveSubTopic(config.userAddr4, item.subTopicHash, config.subChainAddr,
+            config.pwd, config.keystore_ownerTest, "").then((data) => {
+              flag ++;
+              if (flag == voteArr3.length) {
+                resolve(1);
+              }
+            });
+        });
+    
+      });
+
+    });
+  });
+  
+  
+}
+ 

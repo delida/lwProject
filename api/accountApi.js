@@ -263,9 +263,6 @@ export var chargeToken = async function (userAddr, value, marketableTokenAddr, p
 // 	// });	
 // }
 
-export var buyToken = function (userAddr, value) {
-	testbuyMintToken(userAddr, pwd, value); 
-}
 
 
 // 提币
@@ -480,7 +477,7 @@ export function myHistoryList(pageNum, pageSize, userAddr, subChainAddr, rpcIp) 
 
 // 时间戳转日期
 function add0(m) { return m < 10 ? '0' + m : m }
-function timestampToTime(shijianchuo) {
+export function timestampToTime(shijianchuo) {
 	//shijianchuo是整数，否则要parseInt转换
 	var time = new Date(shijianchuo  * 1000);
 	var y = time.getFullYear();
@@ -491,6 +488,22 @@ function timestampToTime(shijianchuo) {
 	var s = time.getSeconds();
 	return y + '-' + add0(m) + '-' + add0(d) + ' ' + add0(h) + ':' + add0(mm) + ':' + add0(s);
 }
+
+export function  getCurrentTime() {
+	let date = new Date();
+	let y = date.getFullYear();
+	let m = date.getMonth() + 1;
+	m = m < 10 ? ('0' + m) : m;
+	let d = date.getDate();
+	d = d < 10 ? ('0' + d) : d;
+	var h = date.getHours();
+	h = h < 10 ? ('0' + h) : h;
+	let minute = date.getMinutes();
+	let second = date.getSeconds();
+	minute = minute < 10 ? ('0' + minute) : minute;
+	second = second < 10 ? ('0' + second) : second;
+	return y + '-' + m + '-' + d + ' ' + h + ':' + minute + ':' + second;
+	};
 
 // 提币定时器
 function redeemTimer(userAddr, pwd, value, privatekey, subChainAddr, marketableTokenAddr, balance1) {
@@ -556,57 +569,99 @@ var compareByTimeValue = function (obj1, obj2) {
     }            
 } 
 
+
+// export function test () {
+// 	var url = config.restfulUrl + "VnodeAddr/" + config.protocalAddress;
+// 	_fetch(fetch_promise(url, body = {}), 6000).then((data) => {
+// 		console.log("---------" + data);
+// 	});
+// }
+
+// 带有超时设置的fetch
+function _fetch(fetch_promise, timeout) {
+	var abort_fn = null;
+	
+    var abort_promise = new Promise((resolve, reject) => {
+        abort_fn = function() {
+            reject("timeout");   // 超时
+        };
+    });
+    var abortable_promise = Promise.race([
+        fetch_promise,
+        abort_promise
+    ]);
+    setTimeout(function(){
+        abort_fn();
+    }, timeout);
+
+    return abortable_promise;
+}
+
+function fetch_promise(url) {
+    return new Promise((resolve) => {
+        _get(url, null).then((datas) => {
+			resolve(datas);
+			
+		});
+    })
+}
+
 export var via = "";
 export var vnodeAddress = "";
-// 随机选择一个可连接的vnode，放入缓存
+// 随机选择一个可连接的vnode，放入缓存(1. 超时   2. 返回为undefined  3.正常))
 export var commonSetVnode = function () {
 	var ip = config.restfulUrl + "VnodeAddr/" + config.protocalAddress;
 	return new Promise((resolve) => {
-		_get(ip, null).then((datas) => {
+		//_get(ip, null).then((datas) => {
+		_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
+			// 不超时
 			if (datas != undefined) {
 				datas = randomChange(datas.VnodeList);  // 随机组合
 				var vnodeArr = [];
 				var vnodeInfo = {};
 				async.each(datas, function (item, callback) {
-					var c3 = new Chain3(new Chain3.providers.HttpProvider("http://" + item.VnodeAddress));
+					if (item.VnodeAddress != "" && item.VnodeAddress != null && 
+							item.via != "" && item.via != null) {
+						var c3 = new Chain3(new Chain3.providers.HttpProvider("http://" + item.VnodeAddress));
 					
-					c3.mc.getBlockNumber(function (err, blockNum) {
-						if (vnodeArr.length == 0) {
-							if (!err && blockNum != undefined && blockNum > 0) {   // 可以正常连接
-								via = item.via;
-								vnodeAddress = item.VnodeAddress;
-								vnodeInfo.via = via;
-								vnodeInfo.vnodeAddress = vnodeAddress;
-								vnodeArr.push(vnodeInfo);
-								chain3 = c3;
+						c3.mc.getBlockNumber(function (err, blockNum) {
+							if (vnodeArr.length == 0) {
+								if (!err && blockNum != undefined && blockNum > 0) {   // 可以正常连接
+									via = item.via;
+									vnodeAddress = item.VnodeAddress;
+									vnodeInfo.via = via;
+									vnodeInfo.vnodeAddress = vnodeAddress;
+									vnodeArr.push(vnodeInfo);
+									chain3 = c3;
+								}
+							
 							}
-						
-						}
-						callback(null);
-					});
+							
+						});
+					}
+					callback(null);
 					
 				}, function (err) {
 					resolve(1);
 				});
 			} else {
-				// restful接口调用失败，则连接config中默认的vnode
+				// restful接口调用失败，返回undefined, 则连接config中默认的vnode
 				via = config.via;
 				chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
 				resolve(2);
 			}
 			
-			
-		  });
-
-
-
-
-
+		  },(err) => {
+			// timeout，同样连接config中默认的vnode
+			via = config.via;
+			chain3 = new Chain3(new Chain3.providers.HttpProvider(config.vnodeIp));
+			resolve(2);
+		});
 	});
 	 
 }
 
-// 进入版块，设置vnode和rpc
+// 进入版块，设置vnode和rpc(分为超时，返回为undefined，正常三种情况))
 export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 	var start = new Date().getTime();
 	var ip = config.restfulUrl + "MonitorAddr/" + subChainAddr;
@@ -614,7 +669,8 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 	return new Promise((resolve) => {
 		commonSetVnode().then((data) => {
 			if (data == 1 || data == 2) {
-				_get(ip, null).then((datas) => {
+				//_get(ip, null).then((datas) => {
+				_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
 					if (datas != undefined) {
 						datas = randomChange(datas.MonitorList);  // 随机组合
 						var rpcArr = [];
@@ -656,16 +712,27 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 								
 							});
 					} else {
+						// 远程连接报错，连接默认的
 						rpcIpCommon = rpcIp;
-						responseRes.isSuccess = 3;
+						responseRes.isSuccess = 3; // 备用远程服务连接成功
 						responseRes.rpcIp = rpcIp ;
 						var end = new Date().getTime();
 
 						console.log("restful接口调用耗时为：");
 						console.log((end-start)/1000);
-						resolve(responseRes);   // 备用远程服务连接成功
+						resolve(responseRes);   
 					}
 				
+				}, (err) => {
+					// timeout，拿默认的
+					rpcIpCommon = rpcIp;
+					responseRes.isSuccess = 3; // 备用远程服务连接成功
+					responseRes.rpcIp = rpcIp ;
+					var end = new Date().getTime();
+
+					console.log("restful接口调用耗时为：");
+					console.log((end-start)/1000);
+					resolve(responseRes);  
 				});
 			} 
 		});
@@ -695,4 +762,9 @@ function randomChange(array) {
 	return array.sort(function() {
 	     return (0.5-Math.random());
 	});
+}
+
+var t = Date.now();  
+export function sleep(d){  
+    while(Date.now() - t <= d);  
 }
