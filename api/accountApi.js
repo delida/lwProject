@@ -616,7 +616,8 @@ export var commonSetVnode = function () {
 		//_get(ip, null).then((datas) => {
 		_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
 			// 不超时
-			if (datas != undefined) {
+			datas = {"VnodeList":[]};
+			if (datas != undefined && datas.VnodeList.length != 0) {
 				datas = randomChange(datas.VnodeList);  // 随机组合
 				var vnodeArr = [];
 				var vnodeInfo = {};
