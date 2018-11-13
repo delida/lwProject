@@ -239,7 +239,7 @@ export var createSubTopic = async function (topicHash, desc, userAddr, pwd, keys
   var privatekeyObj = await decrypt(keystore, pwd);
   var privatekey = privatekeyObj.privateKey + "";
   var nonce = await currentNonce(subChainAddr, userAddr, rpcIp);
-  return checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
+  return checkTime (subChainAddr, topicHash,rpcIp, userAddr).then ((data) => {
     if (data == 0) {
       result.subTopicHash = "";
       result.isSuccess = 2;  // 问题已经过期
@@ -280,7 +280,7 @@ export var getSubTopicList = function (topicHash, pageNum, pageSize, subChainAdd
   var subTopicArr = []
   return new Promise((resolve) => { 
     try {
-      checkTime (subChainAddr, topicHash,rpcIp,topicIndex).then ((data) => {
+      checkTime (subChainAddr, topicHash,rpcIp, userAddr).then ((data) => {
         if (data == 0 && type == 1) {  
           responseRes.isEnable = 0;
           responseRes.isOwner = isOwner;
@@ -771,46 +771,107 @@ var readUTF = function (arr) {
   }
 
 // 校验当前问题是否过期
-function checkTime (subChainAddr, topicHash,rpcIp,topicIndex ) {
+function checkTime (subChainAddr, topicHash,rpcIp,userAddr) {
   return new Promise((resolve) => {
-    var postParam3 = {
-      "SubChainAddr": subChainAddr,
-      "Request": [
-        {
-          "Reqtype": 2,
-          "Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
-            "Position": Hexstring2btye(topicHash.substring(2)),
-          "Structformat": [49,49,51,49,49,49,49,49,49,49,49,49]
+
+
+    // 历史方法
+    // var postParam3 = {
+    //   "SubChainAddr": subChainAddr,
+    //   "Request": [
+    //     {
+    //       "Reqtype": 2,
+    //       "Storagekey": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5],
+    //       "Position": Hexstring2btye(topicHash.substring(2)),
+    //       "Structformat": [49,49,51,49,49,49,49,49,49,49,49,49]
           
-        }
-      ]
-    };
-    getContractInfo(rpcIp,"ScsRPCMethod.GetContractInfo", postParam3).then(function(topicResult){
+    //     }
+    //   ]
+    // };
+    // getContractInfo(rpcIp,"ScsRPCMethod.GetContractInfo", postParam3).then(function(topicResult){
       
-        // 当前区块高度
-        var postParam4 = {
-          "SubChainAddr": subChainAddr
-        };
-        getContractInfo(rpcIp,"ScsRPCMethod.GetBlockNumber", postParam4).then(function(currentBlockNum){
+    //     // 当前区块高度
+    //     var postParam4 = {
+    //       "SubChainAddr": subChainAddr
+    //     };
+    //     getContractInfo(rpcIp,"ScsRPCMethod.GetBlockNumber", postParam4).then(function(currentBlockNum){
   
-        var topic = {};
-        var str = chain3.sha3(topicHash.substring(2) + topicIndex, {"encoding": "hex"}).substring(2);
-        var prefixStr = str.substring(0, str.length - 3);
-        var suffixStr = str.substring(str.length - 3, str.length);
-        var suffixInt = parseInt(suffixStr, 16);
+    //     var topic = {};
+    //     var str = chain3.sha3(topicHash.substring(2) + topicIndex, {"encoding": "hex"}).substring(2);
+    //     var prefixStr = str.substring(0, str.length - 3);
+    //     var suffixStr = str.substring(str.length - 3, str.length);
+    //     var suffixInt = parseInt(suffixStr, 16);
         
-        var startBlock = topicResult[prefixStr + converHex(suffixInt + 4)];
-        var startBlockNum = chain3.toDecimal('0x' + startBlock.substring(2));
-        var duration = parseInt(topicResult[prefixStr + converHex(suffixInt + 5)], 16) * packPerBlockTime
+    //     var startBlock = topicResult[prefixStr + converHex(suffixInt + 4)];
+    //     var startBlockNum = chain3.toDecimal('0x' + startBlock.substring(2));
+    //     var duration = parseInt(topicResult[prefixStr + converHex(suffixInt + 5)], 16) * packPerBlockTime
   
-          var pastTime = (currentBlockNum - startBlockNum) * packPerBlockTime;
-          if (duration - pastTime <= 10 ) {
-            resolve(0);
-          } else {
-            resolve(1);
-          }
-      });
-    })
+    //       var pastTime = (currentBlockNum - startBlockNum) * packPerBlockTime;
+    //       if (duration - pastTime <= 10 ) {
+    //         resolve(0);
+    //       } else {
+    //         resolve(1);
+    //       }
+    //   });
+    // })
+
+
+    // 包含setDappAbi的
+    // var postParam1 = {
+    //   "SubChainAddr": subChainAddr,
+    //   "Sender": deployLwSolAdmin,
+    //   "Data": config.lwAbi
+    // };
+    // var postParam4 = {
+    //   "SubChainAddr": subChainAddr
+    // };
+    // getContractInfo(rpcIp,"ScsRPCMethod.GetBlockNumber", postParam4).then(function(currentBlockNum){
+
+    //   getContractInfo(rpcIp, "ScsRPCMethod.SetDappAbi", postParam1).then(function(result){
+    //     if (result == "success") {
+    //       var postParam2 = {
+    //         "SubChainAddr": subChainAddr,
+    //         "Sender": deployLwSolAdmin,
+    //         "Params": ["getTopicByHash", topicHash]
+    //       };
+    //       getContractInfo(rpcIp,"ScsRPCMethod.AnyCall", postParam2).then(function(topicInfo){
+    //         var topic = JSON.parse(topicInfo)[0];
+    //         var surplusBlk = topic.Expblk - (currentBlockNum - topic.Startblk);
+    //         if (surplusBlk > 1) {
+    //           resolve(1);
+    //         } else {
+    //           resolve(0);
+    //         }
+    //       });
+    //     } else {
+    //       resolve(0);
+    //     }
+  
+  
+    //   });
+    // });
+    
+    var postParam4 = {
+      "SubChainAddr": subChainAddr
+    };
+    getContractInfo(rpcIp,"ScsRPCMethod.GetBlockNumber", postParam4).then(function(currentBlockNum){
+
+          var postParam2 = {
+            "SubChainAddr": subChainAddr,
+            "Sender": userAddr,
+            "Params": ["getTopicByHash", topicHash]
+          };
+          getContractInfo(rpcIp,"ScsRPCMethod.AnyCall", postParam2).then(function(topicInfo){
+            var topic = JSON.parse(topicInfo);
+            var surplusBlk = topic.Expblk - (currentBlockNum - topic.Startblk);
+            if (surplusBlk > 1) {
+              resolve(1);
+            } else {
+              resolve(0);
+            }
+          });
+    });
+
   });
     
 }
@@ -1019,39 +1080,38 @@ export function approveSubTopics() {
 
 
 export function getSubTopics() {
-  return new Promise ((resolve) => {
-    getTopicList(0,0, config.subChainAddr, "", "0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0", config.userAddr2).then((data1) => {
+  // return new Promise ((resolve) => {
+  //   getTopicList(0,0, config.subChainAddr, "", "0x44c10f4cd26dbb33b0cc3bd8d9fb4e313498cfa0", config.userAddr2).then((data1) => {
 
-      console.log("=============" +data1);
-      var arr1 = [];
-      var arr2 = [];
-      var flag = 0;
-      var arrInfo = {};
-      data1.topicArr.forEach(function (item, index) {
+  //     var arr1 = [];
+  //     var arr2 = [];
+  //     var flag = 0;
+  //     var arrInfo = {};
+  //     data1.topicArr.forEach(function (item, index) {
           
-          getSubTopicList(item.topicHash,
-           0,0, config.subChainAddr,"", 1, config.deployLwSolAdmin, config.userAddr2).then((data2) => {
-           console.log(data2);
+  //         getSubTopicList(item.topicHash,
+  //          0,0, config.subChainAddr,"", 1, config.deployLwSolAdmin, config.userAddr2).then((data2) => {
+  //          console.log(data2);
 
-            flag ++;
-            if (data2.subTopicList.length > 0) {
-              arr1.push(data2.subTopicList[0].subTopicHash);
-            arr2.push(data2.subTopicList[1].subTopicHash);
-            if (flag == data1.topicArr.length) {
-              arrInfo.arr1 = arr1;
-              arrInfo.arr2 = arr2;
-              resolve (arrInfo);
-            }
-            }
+  //           flag ++;
+  //           if (data2.subTopicList.length > 0) {
+  //             arr1.push(data2.subTopicList[0].subTopicHash);
+  //           arr2.push(data2.subTopicList[1].subTopicHash);
+  //           if (flag == data1.topicArr.length) {
+  //             arrInfo.arr1 = arr1;
+  //             arrInfo.arr2 = arr2;
+  //             resolve (arrInfo);
+  //           }
+  //           }
             
 
 
-          });
+  //         });
           
-      });
+  //     });
     
-    });
-  });
+  //   });
+  // });
   
 }
 

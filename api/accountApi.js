@@ -608,9 +608,10 @@ function fetch_promise(url) {
 
 export var via = "";
 export var vnodeAddress = "";
-// 随机选择一个可连接的vnode，放入缓存(1. 超时   2. 返回为undefined  3.正常))
+// 随机选择一个可连接的vnode，放入缓存(1 正常  2 超时或者undefined)
 export var commonSetVnode = function () {
-	var ip = config.restfulUrl + "VnodeAddr/" + config.protocalAddress;
+	var ip = config.restfulUrl + "/VnodeAddr/" + config.protocalAddress;
+	//console.log(ip);
 	return new Promise((resolve) => {
 		//_get(ip, null).then((datas) => {
 		_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
@@ -664,17 +665,17 @@ export var commonSetVnode = function () {
 	 
 }
 
-// 进入版块，设置vnode和rpc(分为超时，返回为undefined，正常三种情况))
+// 进入版块，设置vnode和rpc(isSuccess:1 成功   2. vnode restful连接返回undefined，或者超时   3. monitor restful连接返回undefined, 空数组，或者超时)
 export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 	var start = new Date().getTime();
-	var ip = config.restfulUrl + "MonitorAddr/" + subChainAddr;
+	var ip = config.restfulUrl + "/MonitorAddr/" + subChainAddr;
 	var responseRes = {};
 	return new Promise((resolve) => {
 		commonSetVnode().then((data) => {
 			if (data == 1 || data == 2) {
 				//_get(ip, null).then((datas) => {
 				_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
-					if (datas != undefined) {
+					if (datas != undefined && datas.MonitorList.length != 0) {
 						datas = randomChange(datas.MonitorList);  // 随机组合
 						var rpcArr = [];
 						var rpcInfo = {};
@@ -705,11 +706,11 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 									if (data == 1) {
 										responseRes.isSuccess = 1;   // 正常情况
 									} else if (data == 2){
-										responseRes.isSuccess = 2;   // 备用节点服务连接成功
+										responseRes.isSuccess = 2;   // 备用节点服务连接成功(vnode restful连接返回undefined，或者超时)
 									}
 								}
 								var end = new Date().getTime();
-								console.log("restful接口调用耗时为：接口调用耗时为：");
+								console.log("restful接口调用耗时为：");
 								console.log((end-start)/1000);
 								resolve(responseRes);
 								
@@ -727,6 +728,7 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 					}
 				
 				}, (err) => {
+					//console.log(11111111111111);
 					// timeout，拿默认的
 					rpcIpCommon = rpcIp;
 					responseRes.isSuccess = 3; // 备用远程服务连接成功
