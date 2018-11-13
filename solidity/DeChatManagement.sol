@@ -69,4 +69,16 @@ contract DeChatManagement {
             }
         }
     }
+
+    function updateBoardName(bytes32 boardName, address subchainAddr) public {
+        require(owner == msg.sender);
+        
+        uint i;
+        for (i = 0; i < boardList.length; i++) {
+            if(boardList[i].subchainAddr == subchainAddr) {
+                boardList[i].boardName = boardName;
+                break;
+            }
+        }
+    }
 }

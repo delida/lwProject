@@ -294,6 +294,18 @@ contract DeChat is DappBase{
 		return myTopics[addr];
 	}
 
+	function getTopicByHash(bytes32 hash) public view returns (topic){
+		require(hash != bytes32(0));
+		
+		return topics[hash];
+	}
+
+	function getSubTopicByHash(bytes32 hash) public view returns (subTopic){
+		require(hash != bytes32(0));
+		
+		return subTopics[hash];
+	}
+
 	function getTopicList(uint pageNum, uint pageSize) public view returns (topic[]) {
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
