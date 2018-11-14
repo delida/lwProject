@@ -611,12 +611,10 @@ export var vnodeAddress = "";
 // 随机选择一个可连接的vnode，放入缓存(1 正常  2 超时或者undefined)
 export var commonSetVnode = function () {
 	var ip = config.restfulUrl + "/VnodeAddr/" + config.protocalAddress;
-	//console.log(ip);
 	return new Promise((resolve) => {
 		//_get(ip, null).then((datas) => {
 		_fetch(fetch_promise(ip), config.timeOut).then((datas) => {
 			// 不超时
-			datas = {"VnodeList":[]};
 			if (datas != undefined && datas.VnodeList.length != 0) {
 				datas = randomChange(datas.VnodeList);  // 随机组合
 				var vnodeArr = [];
@@ -729,7 +727,6 @@ export var commonSetRpcAndVnode = function (subChainAddr, rpcIp) {
 					}
 				
 				}, (err) => {
-					//console.log(11111111111111);
 					// timeout，拿默认的
 					rpcIpCommon = rpcIp;
 					responseRes.isSuccess = 3; // 备用远程服务连接成功
