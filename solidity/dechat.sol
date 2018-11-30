@@ -16,7 +16,7 @@ contract DappBase {
         bool distDone;
     }
     
-    mapping(uint => RedeemMapping) internal redeem;
+    RedeemMapping internal redeem;
     address[] public curNodeList;//
     mapping(bytes32=>Task) task;
     mapping(bytes32=>address[]) nodeVoters;
@@ -30,51 +30,45 @@ contract DappBase {
         
         return curNodeList;
     }
-
-
-    function getRedeemMapping(address userAddr, uint start, uint end) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
-        uint i = 0;
+	
+	function getRedeemMapping(address userAddr, uint pos) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
         uint j = 0;
         uint k = 0;
         
-        for (i = start; i <= end; i++) {
-            if (userAddr != address(0)) {
-                for (k = 0; k < redeem[i].userAddr.length; k++) {
-                    if (redeem[i].userAddr[k] == userAddr) {
-                        j++;
-                    }
+        if (userAddr != address(0)) {
+            for (k = pos; k < redeem.userAddr.length; k++) {
+                if (redeem.userAddr[k] == userAddr) {
+                    j++;
                 }
-            } else {
-                j += redeem[i].userAddr.length;
             }
+        } else {
+            j += redeem.userAddr.length;
         }
         address[] memory addrs = new address[](j);
         uint[] memory amounts = new uint[](j);
         uint[] memory times = new uint[](j);
         j = 0;
-        for (i = start; i <= end; i++) {
-            for (k = 0; k < redeem[i].userAddr.length; k++) {
-                if (userAddr != address(0)) {
-                    if (redeem[i].userAddr[k] == userAddr) {
-                        amounts[j] = redeem[i].userAmount[k];
-                        times[j] = redeem[i].time[k];
-                        j++;
-                    }
-                } else {
-                    addrs[j] = redeem[i].userAddr[k];
-                    amounts[j] = redeem[i].userAmount[k];
-                    times[j] = redeem[i].time[k];
+        for (k = pos; k < redeem.userAddr.length; k++) {
+            if (userAddr != address(0)) {
+                if (redeem.userAddr[k] == userAddr) {
+                    amounts[j] = redeem.userAmount[k];
+                    times[j] = redeem.time[k];
                     j++;
                 }
+            } else {
+                addrs[j] = redeem.userAddr[k];
+                amounts[j] = redeem.userAmount[k];
+                times[j] = redeem.time[k];
+                j++;
             }
         }
         return (addrs, amounts, times);
     }
 	
-	function redeemFromMicroChain() public payable {//The user takes the coin to the main chain erc20
-        redeem[block.number].userAddr.push(msg.sender);
-        redeem[block.number].userAmount.push(msg.value);
-        redeem[block.number].time.push(now);
+	function redeemFromMicroChain() public payable {
+        redeem.userAddr.push(msg.sender);
+        redeem.userAmount.push(msg.value);
+        redeem.time.push(now);
     }
     
     function have(address[] addrs, address addr) public view returns (bool) {
@@ -108,7 +102,7 @@ contract DappBase {
         return;
     }
     
-    function postFlush(bytes32 flushhash, address[] tosend, uint[] amount) public { //tosend is array of [blk,add,amt]
+    function postFlush(bytes32 flushhash, address[] tosend, uint[] amount) public {
         require(have(curNodeList, msg.sender));
         require(tosend.length == amount.length);
         
