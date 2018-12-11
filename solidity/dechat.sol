@@ -301,6 +301,7 @@ contract DeChat is DappBase{
 	}
 
 	function getTopicList(uint pageNum, uint pageSize) public view returns (topic[]) {
+		require(pageSize != 0);
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
 		uint count = newTopicList.length;
@@ -321,6 +322,7 @@ contract DeChat is DappBase{
 	
 	function getSubTopicList(bytes32 hash, uint pageNum, uint pageSize) public view returns (subTopic[]) {
 		require(hash != bytes32(0));
+		require(pageSize != 0);
 		
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
