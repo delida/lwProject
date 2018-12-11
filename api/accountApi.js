@@ -42,7 +42,7 @@ const Hexstring2btye = (str)=> {
     if (len % 2 != 0) {
         return null;
     }
-    len /= 2;
+	len /= 2;
     let hexA = new Array();
     for (let i = 0; i < len; i++) {
         let s = str.substr(pos, 2);
@@ -619,6 +619,7 @@ export var commonSetVnode = function () {
 				datas = randomChange(datas.VnodeList);  // 随机组合
 				var vnodeArr = [];
 				var vnodeInfo = {};
+				
 				async.each(datas, function (item, callback) {
 					if (item.VnodeAddress != "" && item.VnodeAddress != null && 
 							item.via != "" && item.via != null) {

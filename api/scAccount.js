@@ -10,10 +10,8 @@ var userAddr = config.userAddr;
 var subChainAddr = config.subChainAddr;
 var marketableTokenAddr = config.marketableTokenAddr;
 
-	
 export	function sendtx(src, tgtaddr, amount, strData, privateKey) {
 		return new Promise((resolve, reject) => {
-			
 			chain3.mc.getTransactionCount(src,function (err, txcount) {
 				chain3.version.getNetwork(function (err, version) {
 					var rawTx = {
