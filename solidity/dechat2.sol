@@ -1,6 +1,6 @@
 pragma solidity ^0.4.19;
 pragma experimental ABIEncoderV2;
-//David Chen
+//Xiong Liu
 //Dapp Dechat
 
 contract DappBase {
@@ -150,20 +150,24 @@ contract DeChat is DappBase{
 	
 	mapping(bytes32 => topic) public topics;
 	mapping(bytes32 => subTopic) public subTopics;
-	mapping(bytes32 => bytes32[]) public topicAns; // main topic => [ans1, ans2,...]
+	mapping(bytes32 => bytes32[]) public ansRecord; // main topic => close [ans1, ans2,...]
+	mapping(bytes32 => bytes32[]) public topicAns;  // main topic => temp [ans1, ans2,...]
 	mapping(uint => bytes32[]) public expinfo;
 	mapping(bytes32 => uint) public voteinfo; // (address,topichash) => 0,1
 	bytes32[] public newTopicList;
 	mapping(bytes32 => uint ) newTopicIndex;
 	uint public lastProcBlk;
 	uint public answerBond = 10 ** 17; // 0.1
+	uint public voteBond = 2 * 10 ** 18; //
 	uint public firstPrize = 50; //
-	uint public secondPrize = 20; //
-	uint public votePrize = 20; //
+	uint public votePrize = 40; //
 	uint public modPrize = 9;
-	uint public devPrize = 1; 
+	uint public devPrize = 1;
+	uint public cycleRate = 50;
 	uint public voteAwardCount = 100; //only first 100 voter get reward
+	uint public voteActiveCount = 2;  //the min vote subtopic num every cycle to continue the topic
 	uint public maxExpBlk = 200;
+	uint public cycleExpBlk = 100;
 	
 	address internal owner;
 	address internal developer;
@@ -171,8 +175,11 @@ contract DeChat is DappBase{
 	
 	mapping(address => topic[]) public myTopics; // index = 0x18
 	
-	uint private maxVotes = 100;// autoCheck max handle votes of one subTopic
+	uint private maxVotes = 0;// autoCheck max handle votes of one subTopic
 	uint private maxTopics = 100;// autoCheck max handle Topics of one block
+
+	uint private rewardCycle = 0;
+	uint private rewardBack = 0;
 
 	function DeChat(address mod, address dev) public payable {
 		lastProcBlk = block.number;
@@ -189,6 +196,10 @@ contract DeChat is DappBase{
         return maxExpBlk;
     }
 
+	function getVoteBond() public returns (uint){
+ 		return voteBond / (10 ** 18);
+	}
+
 	function createTopic(uint award, uint expblk, string desc) public payable returns (bytes32) {
 		require(msg.value >= award );
 		bytes32 hash = sha3(block.number, msg.sender, desc);
@@ -203,7 +214,7 @@ contract DeChat is DappBase{
 		topics[hash].startblk = block.number;
 		topics[hash].desc = desc;
 		topics[hash].closed = false;
-		topics[hash].status = 0;
+		topics[hash].status = 100;
 		topics[hash].bestVoteCount = 0;
 		topics[hash].secondBestVoteCount = 0;
 		//add loop value
@@ -215,12 +226,17 @@ contract DeChat is DappBase{
 		return hash;
 	}
 	
-	function voteOnTopic(bytes32 topichash) public returns(bytes32) {
+	function voteOnTopic(bytes32 topichash) public payable returns(bytes32) {
+		require(msg.value >= voteBond );
 		require(subTopics[topichash].hash != "");
 		bytes32 parenthash = subTopics[topichash].parent;
 		require(parenthash != "" );
+		uint sta = topics[parenthash].status;
+		require(sta >= 100 );
+
+		topics[parenthash].award += msg.value;
 		//key is (topic, msg.sender)
-		bytes32 key = sha3(msg.sender, parenthash);
+		bytes32 key = sha3(msg.sender, parenthash, sta);
 		if (voteinfo[key] >= 1){
 		    return bytes32(0);
 		}
@@ -265,7 +281,7 @@ contract DeChat is DappBase{
 		subTopics[hash].desc = desc;
 		subTopics[hash].reward = 0;
 		subTopics[hash].parent = parenthash;
-		subTopics[hash].status = 0;
+		subTopics[hash].status = 100;
 		subTopics[hash].voteCount = 0;
 		//add to ans list
 		topicAns[parenthash].push(hash);
@@ -326,17 +342,23 @@ contract DeChat is DappBase{
 		
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
-		uint count = topicAns[hash].length;
-		if (start>=count) {
+		uint count1 = ansRecord[hash].length;
+		uint count2 = topicAns[hash].length;
+
+		if (start>=count1+count2) {
 			start = 0;
 			end =0;
-		} else if (end>count) {
-			end = count;
+		} else if (end>count1+count2) {
+			end = count1+count2;
 		}
 
 		subTopic[] memory memSubTopics = new subTopic[](end-start);
 		for (uint i=start; i<end; i++) {
-			memSubTopics[i-start] = subTopics[topicAns[hash][i]];
+			if (i<count1) {
+				memSubTopics[i-start] = subTopics[ansRecord[hash][i]];
+			} else if (i<count1+count2) {
+				memSubTopics[i-start] = subTopics[topicAns[hash][i]];
+			}
 		}
 
 		return memSubTopics;
@@ -366,7 +388,6 @@ contract DeChat is DappBase{
 
 	function autoCheck() public {
 		require ( lastProcBlk < block.number );
-		uint rewardback = 0;
 		uint i=0;
 		for(i=lastProcBlk; i<block.number; i++ ) {
 			for( uint j=0; j<expinfo[i].length && j<maxTopics; j++ ) {
@@ -375,16 +396,20 @@ contract DeChat is DappBase{
 				continue;
 				}
 
-                rewardback = topics[phash].award;
+                rewardCycle = topics[phash].award;
+				rewardBack = rewardCycle;
 
 				//best topic
 				bytes32 besthash = topics[phash].bestHash;
+				if (subTopics[besthash].voters.length >= voteActiveCount) {
+					rewardBack = rewardCycle * cycleRate / 100;
+				}
 				if(subTopics[besthash].owner != address(0) ){
-					uint reward1 = topics[phash].award * firstPrize /100;
+					uint reward1 = rewardCycle * firstPrize /100;
 					subTopics[besthash].owner.transfer(reward1);
 					subTopics[besthash].reward = reward1;
 
-                    rewardback = rewardback - reward1;
+                    rewardBack = rewardBack - reward1;
 				}
 
 				//award top 100 voter for besthash
@@ -394,52 +419,63 @@ contract DeChat is DappBase{
 		                }
 
 				for( uint k=0; k<maxVotes; k++ ) {
-                    uint rewardv = topics[phash].award * votePrize /100/maxVotes;
+                    uint rewardv = rewardCycle * votePrize /100/maxVotes;
 					subTopics[besthash].voters[k].transfer(rewardv);
 
-                    rewardback = rewardback - rewardv;
+                    rewardBack = rewardBack - rewardv;
 				}
 				
-				//second best topic
-				bytes32 secondBesthash = topics[phash].secondBestHash;
-				if(subTopics[secondBesthash].owner != address(0) ){
-					uint reward2 = topics[phash].award * secondPrize /100;
-					subTopics[secondBesthash].owner.transfer(reward2);
-					subTopics[secondBesthash].reward = reward2;
-
-                    rewardback = rewardback - reward2;
-				}
-
 				// award moderator
 				if(moderator != address(0) ){
-				    uint t = topics[phash].award * modPrize /100;
+				    uint t = rewardCycle * modPrize /100;
 					moderator.transfer(t);
 
-                    rewardback = rewardback - t;
+                    rewardBack = rewardBack - t;
 				}
 
 				// award developer
 				if(developer != address(0) ){
-					developer.transfer( topics[phash].award * devPrize /100 );
+					developer.transfer( rewardCycle * devPrize /100 );
 
-                    rewardback = rewardback -  topics[phash].award * devPrize /100;
+                    rewardBack = rewardBack -  rewardCycle * devPrize /100;
 				}
 
 		        // pay back to owner if remain
-		        if (rewardback > 0) {
-		            topics[phash].owner.transfer(rewardback);
+		        if (rewardBack > 0 && subTopics[besthash].voters.length < voteActiveCount) {
+		            topics[phash].owner.transfer(rewardBack);
                 }
 
-				//mark as closed
-				topics[phash].closed = true;
-				updateMyTopic(topics[phash]);
-				//swap with last one
-				bytes32 last = newTopicList[newTopicList.length -1 ];
-				uint cur = newTopicIndex[phash];
-				newTopicList[cur] = last;
-				newTopicIndex[last] = cur;
-				newTopicList.length --;
-				delete newTopicIndex[phash];
+				if (subTopics[besthash].voters.length >= voteActiveCount) {
+					subTopics[besthash].status = 101;// close subtopic this cycle
+					ansRecord[phash].push(besthash);
+
+					topics[phash].bestVoteCount = 0;
+					topics[phash].bestHash = bytes32(0);
+					topics[phash].secondBestVoteCount = 0;
+					topics[phash].secondBestHash = bytes32(0);				
+					topics[phash].closed = false;
+					topics[phash].award = rewardBack;
+					// enable vote
+					if (topics[phash].status != 1) {
+						topics[phash].status++;
+					}
+					expinfo[block.number + cycleExpBlk].push(phash);	
+				} else {
+					topics[phash].closed = true; //mark as closed
+
+					//swap with last one
+					bytes32 last = newTopicList[newTopicList.length -1 ];
+					uint cur = newTopicIndex[phash];
+					newTopicList[cur] = last;
+					newTopicIndex[last] = cur;
+					newTopicList.length --;
+					delete newTopicIndex[phash];
+				}
+
+				// clear answers
+				 topicAns[phash].length = 0;			
+				
+				updateMyTopic(topics[phash]);				
 			}
 		}
 		if (i>0) {

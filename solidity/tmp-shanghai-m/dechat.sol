@@ -4,16 +4,32 @@ pragma experimental ABIEncoderV2;
 //Dapp Dechat
 
 contract DappBase {
-	struct RedeemMapping {
+    struct RedeemMapping {
         address[] userAddr;
         uint[] userAmount;
         uint[] time;
     }
     
     struct Task{
-        bytes32 hash;
         address[] voters;
         bool distDone;
+    }
+    
+    struct EnterRecords {
+        address[] userAddr;
+        uint[] amount;
+        uint[] time;
+        uint[] operateTime;
+        address[] scs;
+    }
+    
+    struct EnterErrRecords {
+        address[] userAddr;
+        uint[] amount;
+        uint[] time;
+        uint[] operateTime;
+        address[] scs;
+        uint[] pos;
     }
     
     RedeemMapping internal redeem;
@@ -21,17 +37,43 @@ contract DappBase {
     mapping(bytes32=>Task) task;
     mapping(bytes32=>address[]) nodeVoters;
     address internal owner;
+    EnterRecords internal enterRecords;
+    uint public enterPos;
+    EnterErrRecords internal enterErrRecords;
     
-	function DappBase() public payable {
-		owner = msg.sender;
-	}
-
-    function getCurNodeList() public view returns (address[] nodeList) {
+    function DappBase() public payable {
+        owner = msg.sender;
+    }
+    
+    function getCurNodeList() public view returns (address[]) {
         
         return curNodeList;
     }
-	
-	function getRedeemMapping(address userAddr, uint pos) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
+    
+    function getEnterRecords(address userAddr) public view returns (uint[] enterAmt, uint[] entertime) {
+        uint i;
+        uint j = 0;
+        
+        for (i = 0; i < enterPos; i++) {
+            if (enterRecords.userAddr[i] == userAddr) {
+                j++;
+            }
+        }
+        
+        uint[] memory amounts = new uint[](j);
+        uint[] memory times = new uint[](j);
+        j = 0;
+        for (i = 0; i < enterPos; i++) {
+            if (enterRecords.userAddr[i] == userAddr) {
+                amounts[j] = enterRecords.amount[i];
+                times[j] = enterRecords.time[i];
+                j++;
+            }
+        }
+        return (amounts, times);
+    }
+    
+    function getRedeemMapping(address userAddr, uint pos) public view returns (address[] redeemingAddr, uint[] redeemingAmt, uint[] redeemingtime) {
         uint j = 0;
         uint k = 0;
         
@@ -64,8 +106,8 @@ contract DappBase {
         }
         return (addrs, amounts, times);
     }
-	
-	function redeemFromMicroChain() public payable {
+    
+    function redeemFromMicroChain() public payable {
         redeem.userAddr.push(msg.sender);
         redeem.userAmount.push(msg.value);
         redeem.time.push(now);
@@ -102,22 +144,122 @@ contract DappBase {
         return;
     }
     
-    function postFlush(bytes32 flushhash, address[] tosend, uint[] amount) public {
+    function postFlush(uint pos, address[] tosend, uint[] amount, uint[] times) public {
         require(have(curNodeList, msg.sender));
         require(tosend.length == amount.length);
         
-        bytes32 hash = sha3(flushhash, tosend, amount);
+        bytes32 hash = sha3(pos, tosend, amount, times);
         if( task[hash].distDone) return;
         if(!have(task[hash].voters, msg.sender)) {
             task[hash].voters.push(msg.sender);
             if(task[hash].voters.length > curNodeList.length/2 ) {
                 //distribute
                 task[hash].distDone = true;
-                for(uint i=0; i<tosend.length; i++ ) {
-                    tosend[i].transfer(amount[i]);
+                
+                if (pos < enterPos) {
+                    for(uint i=0; i<tosend.length; i++ ) {
+                        if (pos+i < enterPos) {
+                            if (enterRecords.scs[pos+i] != address(0)) {
+                                if (enterRecords.userAddr[pos+i] == tosend[i] && enterRecords.amount[pos+i] == amount[i] && enterRecords.operateTime[pos+i] == times[i]) {
+                                    enterRecords.scs[pos+i].transfer(amount[i]);
+                                } else {
+                                    enterRecords.userAddr[pos+i] = tosend[i];
+                                    enterRecords.amount[pos+i] = amount[i];
+                                    enterRecords.time[pos+i] = now;
+                                    enterRecords.operateTime[pos+i] = times[i];
+                                    enterRecords.scs[pos+i] = address(0);
+                                
+                                    enterErrRecords.userAddr.push(enterRecords.userAddr[pos+i]);
+                                    enterErrRecords.amount.push(enterRecords.amount[pos+i]);
+                                    enterErrRecords.time.push(enterRecords.time[pos+i]);
+                                    enterErrRecords.operateTime.push(enterRecords.operateTime[pos+i]);
+                                    enterErrRecords.scs.push(enterRecords.scs[pos+i]);
+                                    enterErrRecords.pos.push(pos+i);
+                                    tosend[i].transfer(amount[i]);
+                                }
+                            } else {
+                                if (enterRecords.userAddr[pos+i] == address(0)) {
+                                    enterRecords.userAddr[pos+i] = tosend[i];
+                                    enterRecords.amount[pos+i] = amount[i];
+                                    enterRecords.time[pos+i] = now;
+                                    enterRecords.operateTime[pos+i] = times[i];
+                                    enterRecords.scs[pos+i] = address(0);
+                                    tosend[i].transfer(amount[i]);
+                                }
+                            }
+                        } else {
+                            enterRecords.userAddr.push(tosend[i]);
+                            enterRecords.amount.push(amount[i]);
+                            enterRecords.time.push(now);
+                            enterRecords.operateTime.push(times[i]);
+                            enterRecords.scs.push(address(0));
+                            tosend[i].transfer(amount[i]);
+                        }
+                        
+                    }
+                } else {
+                    for (i = 0; i < pos - enterPos; i++) {
+                        enterRecords.userAddr.push(address(0));
+                        enterRecords.amount.push(0);
+                        enterRecords.time.push(0);
+                        enterRecords.operateTime.push(0);
+                        enterRecords.scs.push(address(0));
+                    }
+                    for(i=0; i<tosend.length; i++ ) {
+                        enterRecords.userAddr.push(tosend[i]);
+                        enterRecords.amount.push(amount[i]);
+                        enterRecords.time.push(now);
+                        enterRecords.operateTime.push(times[i]);
+                        enterRecords.scs.push(address(0));
+                        tosend[i].transfer(amount[i]);
+                    }
                 }
             }
         }
+        enterPos = enterRecords.userAddr.length;
+    }
+    
+    function allocate(uint pos, address[] tosend, uint[] amount, uint[] times) public payable {
+        require(have(curNodeList, msg.sender));
+        require(tosend.length == amount.length);
+        uint i;
+        uint amountSum;
+        for (i = 0; i < amount.length; i++) {
+            amountSum += amount[i];
+        }
+        require(msg.value >= amountSum);
+        
+        if (pos < enterPos) {
+            for(i = 0; i<tosend.length; i++ ) {
+                if (pos+i < enterPos) {
+                    msg.sender.transfer(amount[i]);
+                } else {
+                    enterRecords.userAddr.push(tosend[i]);
+                    enterRecords.amount.push(amount[i]);
+                    enterRecords.time.push(now);
+                    enterRecords.operateTime.push(times[i]);
+                    enterRecords.scs.push(msg.sender);
+                    tosend[i].transfer(amount[i]);
+                }
+            }
+        } else {
+            for (i = 0; i < pos - enterPos; i++) {
+                enterRecords.userAddr.push(address(0));
+                enterRecords.amount.push(0);
+                enterRecords.time.push(0);
+                enterRecords.operateTime.push(0);
+                enterRecords.scs.push(address(0));
+            }
+            for(i=0; i<tosend.length; i++ ) {
+                enterRecords.userAddr.push(tosend[i]);
+                enterRecords.amount.push(amount[i]);
+                enterRecords.time.push(now);
+                enterRecords.operateTime.push(times[i]);
+                enterRecords.scs.push(msg.sender);
+                tosend[i].transfer(amount[i]);
+            }
+        }
+        enterPos = enterRecords.userAddr.length;
     }
 }
 
@@ -301,7 +443,6 @@ contract DeChat is DappBase{
 	}
 
 	function getTopicList(uint pageNum, uint pageSize) public view returns (topic[]) {
-		require(pageSize != 0);
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
 		uint count = newTopicList.length;
@@ -322,7 +463,6 @@ contract DeChat is DappBase{
 	
 	function getSubTopicList(bytes32 hash, uint pageNum, uint pageSize) public view returns (subTopic[]) {
 		require(hash != bytes32(0));
-		require(pageSize != 0);
 		
 		uint start = pageNum*pageSize;
 		uint end = (pageNum+1)*pageSize;
