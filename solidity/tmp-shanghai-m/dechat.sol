@@ -84,7 +84,7 @@ contract DappBase {
                 }
             }
         } else {
-            j += redeem.userAddr.length;
+            j += redeem.userAddr.length - pos;
         }
         address[] memory addrs = new address[](j);
         uint[] memory amounts = new uint[](j);
