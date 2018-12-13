@@ -167,8 +167,7 @@ contract DeChat is DappBase{
 	uint public voteAwardCount = 100; //only first 100 voter get reward
 	uint public voteActiveCount = 2;  //the min vote subtopic num every cycle to continue the topic
 	uint public maxExpBlk = 200;
-	uint public cycleExpBlk = 100;
-	
+
 	address internal owner;
 	address internal developer;
 	address internal moderator;
@@ -196,8 +195,12 @@ contract DeChat is DappBase{
         return maxExpBlk;
     }
 
-	function getVoteBond() public returns (uint){
- 		return voteBond / (10 ** 18);
+	function getParams() public returns (uint[]) {
+		uint[] memory ret = new uint[](3);
+ 		ret[0] = voteBond / (10 ** 18);
+		ret[1] = voteActiveCount;
+		ret[2] = cycleRate;
+		return ret;
 	}
 
 	function createTopic(uint award, uint expblk, string desc) public payable returns (bytes32) {
@@ -459,7 +462,7 @@ contract DeChat is DappBase{
 					if (topics[phash].status != 1) {
 						topics[phash].status++;
 					}
-					expinfo[block.number + cycleExpBlk].push(phash);	
+					expinfo[block.number + topics[phash].expblk - topics[phash].startblk].push(phash);	
 				} else {
 					topics[phash].closed = true; //mark as closed
 
