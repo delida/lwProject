@@ -462,7 +462,9 @@ contract DeChat is DappBase{
 					if (topics[phash].status != 1) {
 						topics[phash].status++;
 					}
-					expinfo[block.number + topics[phash].expblk - topics[phash].startblk].push(phash);	
+					topics[phash].expblk = block.number + (topics[phash].expblk - topics[phash].startblk);
+					expinfo[topics[phash].expblk].push(phash);
+					
 				} else {
 					topics[phash].closed = true; //mark as closed
 
