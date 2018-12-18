@@ -405,7 +405,7 @@ contract DeChat is DappBase{
 				//best topic
 				bytes32 besthash = topics[phash].bestHash;
 				if (subTopics[besthash].voters.length >= voteActiveCount) {
-					rewardBack = rewardCycle * cycleRate / 100;
+					rewardCycle = rewardCycle * cycleRate / 100;
 				}
 				if(subTopics[besthash].owner != address(0) ){
 					uint reward1 = rewardCycle * firstPrize /100;
