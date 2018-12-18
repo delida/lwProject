@@ -395,7 +395,7 @@ contract DeChat is DappBase{
 		for(i=lastProcBlk; i<block.number; i++ ) {
 			for( uint j=0; j<expinfo[i].length && j<maxTopics; j++ ) {
 				bytes32 phash = expinfo[i][j];
-				if(phash == "" || topics[phash].closed) {
+				if(phash == bytes32(0) || topics[phash].closed) {
 				continue;
 				}
 
@@ -450,8 +450,8 @@ contract DeChat is DappBase{
 
 				if (subTopics[besthash].voters.length >= voteActiveCount) {
 					subTopics[besthash].status = 101;// close subtopic this cycle
-					ansRecord[phash].push(besthash);
 
+					ansRecord[phash].push(besthash);
 					topics[phash].bestVoteCount = 0;
 					topics[phash].bestHash = bytes32(0);
 					topics[phash].secondBestVoteCount = 0;
@@ -478,7 +478,8 @@ contract DeChat is DappBase{
 				}
 
 				// clear answers
-				 topicAns[phash].length = 0;			
+				 topicAns[phash].length = 0;
+				 expinfo[i][j] = bytes32(0);
 				
 				updateMyTopic(topics[phash]);				
 			}
