@@ -478,8 +478,9 @@ contract DeChat is DappBase{
 				}
 
 				// clear answers
-				 topicAns[phash].length = 0;
-				 expinfo[i][j] = bytes32(0);
+				//topicAns[phash].length = 0;
+				delete topicAns[phash];
+				expinfo[i][j] = bytes32(0);
 				
 				updateMyTopic(topics[phash]);				
 			}
