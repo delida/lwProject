@@ -360,7 +360,7 @@ contract DeChat is DappBase{
 			if (i<count1) {
 				memSubTopics[i-start] = subTopics[ansRecord[hash][i]];
 			} else if (i<count1+count2) {
-				memSubTopics[i-start] = subTopics[topicAns[hash][i]];
+				memSubTopics[i-start] = subTopics[topicAns[hash][i-count1]];
 			}
 		}
 
